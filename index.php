@@ -20,6 +20,3 @@ $s->setQuantityUpdates(array(
 ));
 
 $s->updateInventory();
-// 
-// echo'<pre>';var_export($s->getProduct(7351058691));echo'</pre>';
-// $s->updateVariant('XXXX23051571459',array('inventory_quantity'=>'3'));

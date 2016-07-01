@@ -32,20 +32,9 @@ class ShopifyInventory extends Shopify {
 						$this->doBatchVariantUpdates();
 
 				}
-				echo '</p>';
 			}
 		}
 		$this->doBatchVariantUpdates();
 	}
-
-
-	// echo'<pre>';var_export($bear);echo'</pre>';
-
-	// $res = $s->updateProduct('7351058691',array('title'=>'Spencer Bear'));
-
-	// $variantId = $bear->product->variants[0]->id;
-	// $res = $s->updateVariant($variantId,array('inventory_quantity'=>3));
-
-	// echo'<pre>';var_export($res);echo'</pre>';
 
 }
