@@ -1,0 +1,46 @@
+body {
+	font-size: 14pt;
+}
+
+.success {
+	color: hsl(150,80%,30%);
+}
+.error {
+	color: hsl(0,80%,50%);
+}
+.warning {
+	color: hsl(40,80%,50%);
+}
+
+.output ol {
+	font-size: .9em;
+	color: hsl(0,0%,30%);
+}
+
+.finish-message {
+	padding: 1.1em;
+	margin: 1em;
+	border: 1px solid black;
+	background: hsl(171, 52%, 95%);
+}
+
+.upload-csv, .login {
+	margin: 1.1em;
+	background: hsl(0,0%,90%);
+	border: 1px solid gray;
+	padding: .8em;
+
+	input[type="submit"] {
+		cursor: pointer;
+		padding: .9em;
+		background: hsl(350, 78%, 30%);
+		color: white;
+		border: none;
+	}
+
+	input[type="file"] {
+		background: hsla(0,0%,50%,.5);
+		padding: .5em;
+		margin: 0 1em;
+	}
+}
