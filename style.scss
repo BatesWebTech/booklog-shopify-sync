@@ -24,11 +24,13 @@ body {
 	background: hsl(171, 52%, 95%);
 }
 
-.upload-csv, .login {
+.upload-csv {
 	margin: 1.1em;
-	background: hsl(0,0%,90%);
-	border: 1px solid gray;
 	padding: .8em;
+
+	label {
+		display: block;
+	}
 
 	input[type="submit"] {
 		cursor: pointer;
@@ -38,9 +40,8 @@ body {
 		border: none;
 	}
 
-	input[type="file"] {
-		background: hsla(0,0%,50%,.5);
+	input[type="file"], input[type="text"] {
 		padding: .5em;
-		margin: 0 1em;
+		font-size: .9em;
 	}
 }

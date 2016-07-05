@@ -1,8 +1,8 @@
 <?php
 
-class ShopifyInventory extends Shopify {
+class ShopifyInventory {
 
-	var $updatesToRun = [];
+	var $updatesToRun = array();
 	var $quantityUpdates;
 
 	var $counts = array(
@@ -40,43 +40,54 @@ class ShopifyInventory extends Shopify {
 	}
 
 	function doBatchVariantUpdates(){
+		global $s;
 		foreach($this->updatesToRun as $vid => $newData){
-
 			usleep(500000); // rate limit to .5 seconds so we dont' hit our api limit
-			$res = $this->updateVariant($vid,$newData);
-			if( property_exists($res,'errors')) {
+			try {
+				$res = $s->updateVariant($vid,$newData);
+				if( ! array_key_exists('errors', $res) ) {
 
-				echo '<li style="color:red">Error: '. json_encode($res->errors) .'</li>';
+					$this->countUpdated(1);
+					echo '<li>Updated barcode <b>'.$res['barcode'].'</b>: changed quantity to <b>'.$res['inventory_quantity'] . '</b></li>';
+				}
+			} catch (ShopifyApiException $e) {
+				echo '<li style="color:red">Error: '. json_encode($res['errors']) .'</li>';
 				$this->countErrored(1);
-			} else {
-				$this->countUpdated(1);
-				echo '<li>Updated barcode <b>'.$res->variant->barcode.'</b> to quantity <b>'.$res->variant->inventory_quantity . '</b></li>';
 			}
+			// $res = $s->updateVariant($vid,$newData);
+			// if( property_exists($res,'errors')) {
+			// 	echo '<li style="color:red">Error: '. json_encode($res->errors) .'</li>';
+			// 	$this->countErrored(1);
+			// } else {
+			// 	$this->countUpdated(1);
+			// 	echo '<li>Updated barcode <b>'.$res->variant->barcode.'</b> to quantity <b>'.$res->variant->inventory_quantity . '</b></li>';
+			// }
 		}
-		$this->updatesToRun = [];
+		$this->updatesToRun = array();
 	}
 
 	function updateInventory() {
-		$products = $this->getAllProducts();
+		global $s;
+		$products = $s->getAllProducts();
 		echo '<ol>';
 		foreach($products as $product) {
-			foreach($product->variants as $variant){
-				if( array_key_exists($variant->barcode,$this->quantityUpdates) ) {
+			foreach($product['variants'] as $variant){
+				if( array_key_exists($variant['barcode'],$this->quantityUpdates) ) {
 	
 					$this->countMatched(1);
 
-					$quantity = $this->quantityUpdates[ $variant->barcode ];
-					$oldQuantity = $variant->inventory_quantity;
+					$quantity = $this->quantityUpdates[ $variant['barcode'] ];
+					$oldQuantity = $variant['inventory_quantity'];
 
 					// if Shopify is set not to track inventory, skip this one
-					if( $variant->inventory_management != 'shopify' )
+					if( $variant['inventory_management'] != 'shopify' )
 						continue;
 
 					// only need to update if the quantity is different.
 					if( $quantity == $oldQuantity)
 						continue;
 
-					$this->updatesToRun[ $variant->id ] = array(
+					$this->updatesToRun[ $variant['id'] ] = array(
 						'inventory_quantity' => $quantity,
 						'old_inventory_quantity' => $oldQuantity
 					);
@@ -98,9 +109,11 @@ class ShopifyInventory extends Shopify {
 	function parseCSV($filename,$inventoryHeader,$barcodeHeader) {
 		$csv = array_map('str_getcsv', file( $filename ));
 		$headerRow = array_shift($csv);
-		$processedCsv = [];
+		$processedCsv = array();
 		foreach($csv as $rowKey => $row){
 			foreach($row as $k=>$v){
+				// skip blank values
+				if($v=='') continue;
 				$processedCsv[$rowKey][ $headerRow[$k] ] = $v;
 			}
 		}
@@ -108,7 +121,7 @@ class ShopifyInventory extends Shopify {
 		$this->countCsvRows( count($processedCsv) );
 		// $inventoryKey = array_search($inventoryHeader, $headerRow );
 		// $barcodeKey = array_search($barcodeHeader, $headerRow );
-		$toUpdate = [];
+		$toUpdate = array();
 		// echo'<pre>';var_export($processedCsv);echo'</pre>';die;
 		foreach($processedCsv as $row) {
 			$barcode = $row[$barcodeHeader];

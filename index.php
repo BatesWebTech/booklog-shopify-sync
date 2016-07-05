@@ -1,7 +1,15 @@
 <?php
 // ini_set('display_errors','1');
 ini_set('max_execution_time',1800);
+
+require_once 'config.php';
+require_once 'ShopifyClient.class.php';
+require_once 'ShopifyWrapper.class.php';
+require_once 'ShopifyInventory.class.php';
+
+require_once 'setup.php';
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,31 +19,6 @@ ini_set('max_execution_time',1800);
 <body>
 
 <?php
-// ini_set('display_errors', '1');
-
-$loginform = <<<FORM
-<form action="" method="post" class="login">
-	Enter the password: <input type="text" value="" name="cookiepwd">
-	<input type="submit" name="submit-cookie" value="login">
-	</form>
-FORM;
-// Just some temporary easy security
-if( isset($_POST['cookiepwd']) ) {
-	sleep(2);
-	if( $_POST['cookiepwd'] == 'goodness' ){
-		setcookie('nosecurity','this is just temporary');
-		// flow through
-	} else {
-		echo '<p class="error">Wrong</p>';
-		echo $loginform;
-		die;
-	}
-} else if( $_COOKIE['nosecurity'] !== 'this is just temporary' ) {
-	echo $loginform;
-	die;
-}
-
-
 
 if( isset($_POST['submit'])) :
 
@@ -43,48 +26,53 @@ if( isset($_POST['submit'])) :
 
 
 	echo '<div class="ouput">';
-	// Setup Shopify Connection
-	require 'Shopify.class.php';
-	require 'ShopifyInventory.class.php';
-
-	define('STORE_NAME','bates-college-store-dev');
-	define('API_KEY','APIKEYGOESHERE');
-	define('API_SECRET','APIKEYGOESHERE');
-	define('API_PASSWORD','APIKEYGOESHERE');
-	$s = new ShopifyInventory(STORE_NAME,API_KEY,API_PASSWORD);
-
 
 	// Parse CSV
 	/* This is in format
 		barcode => new quantity
 	 */
-	$inventoryCSVHeader = 'in_qty_onhand';
-	$barcodeCSVHeader = 'in_isbn';
-	$s->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader );
-	$s->updateInventory();
+	$Inventory = new ShopifyInventory();
+	$inventoryCSVHeader = $_POST['csv_header_inventory'];
+	$barcodeCSVHeader = $_POST['csv_header_barcode'];
+	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader );
+	$Inventory->updateInventory();
 
 	echo '</div>';
 
 	?> 
 	
 	<div class="finish-message">
-		<p>Matched <b><?php echo $s->countMatched() ?></b> out of <b><?php echo $s->countCsvRows() ?></b> barcodes.</p>
-		<p class="success">Updated <?php echo $s->countUpdated() ?> product variants</p>
-		<p class="warning">No changes to <?php echo ($s->countMatched() - $s->countUpdated()) ?> product variants.</p>
-		<p class="error">Errored <?php echo $s->countErrored() ?> times.</p>
+		<p>Matched <b><?php echo $Inventory->countMatched() ?></b> out of <b><?php echo $Inventory->countCsvRows() ?></b> barcodes.</p>
+		<p class="success">Updated <?php echo $Inventory->countUpdated() ?> product variants</p>
+		<p class="warning">No changes to <?php echo ($Inventory->countMatched() - $Inventory->countUpdated()) ?> product variants.</p>
+		<p class="error">Errored <?php echo $Inventory->countErrored() ?> times.</p>
 	</div>
 
 <?php
 	}
 endif; // end posted
 
-
 ?>
 
 <form method="post" action="" enctype="multipart/form-data" class="upload-csv">
 
-<h2>Upload a csv file</h2>
-<input type="file" name="csv" value=""><input type="submit" value="Run Update" name="submit">
+	<h2>Update Inventory</h2>
+
+	<p>
+		<label for="csv_header_inventory">Column header for quantity</label>	
+		<input type="text" id="csv_header_inventory" value="in_qty_onhand" name="csv_header_inventory" />
+	</p>
+	<p>
+		<label for="csv_header_barcode">Column header for barcode</label>
+		<input type="text" id="csv_header_barcode" value="in_isbn" name="csv_header_barcode" />
+	</p>
+	<p>
+		<label for="csv">Upload a CSV</label>
+		<input type="file" name="csv" id="csv">
+	</p>
+	<p>
+		<input type="submit" value="Run Update" name="submit">
+	</p>
 
 </form>
 
