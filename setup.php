@@ -15,14 +15,27 @@ if (isset($_GET['code'])) { // if the code param has been sent to this page... w
     if ($token != '') {
         $shop = $_GET['shop'];
             
-        $f = file('tokens',FILE_SKIP_EMPTY_LINES);
-        // echo'<pre>';var_export($f);echo'</pre>';
+        $f = file('tokens');
 
-        $f[] = "{$shop}|{$token}";
-        $f = implode("\n",$f);
+        // check if this shop is already authorized, if so remove the old key
+        $toWrite = array();
+        foreach($f as $pair){
+            $pair = trim($pair);
+            if( empty($pair) )
+                continue;
+
+            if(strpos($pair,$shop) === 0)
+                continue;
+
+            $toWrite[] = $pair;
+        }
+
+        $toWrite[] = "{$shop}|{$token}";
+        $toWrite = implode("\n",$toWrite);
+        
         chmod('tokens',0777);
-        $fhandle = fopen('tokens','a+');
-        fwrite($fhandle,$f);
+        $fhandle = fopen('tokens','w');
+        fwrite($fhandle,$toWrite);
         fclose($fhandle);
         // chmod('tokens',0644);
     }

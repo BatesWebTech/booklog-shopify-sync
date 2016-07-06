@@ -107,7 +107,21 @@ class ShopifyInventory {
 	}
 
 	function parseCSV($filename,$inventoryHeader,$barcodeHeader) {
-		$csv = array_map('str_getcsv', file( $filename ));
+		//  str_getcsv not in < php 5.3, use fgetcsv instead
+		$csv = array();
+		if( function_exists('str_getcsv') ) {
+			$csv = array_map('str_getcsv', file( $filename ));
+		} else {
+			$fh = fopen( $filename, 'r');
+			while(($data = fgetcsv($fh)) !== FALSE) {
+				$csv[] = $data;
+			}
+			fclose($fh);
+		}
+		if( ! count($csv) ) {
+			echo '<h1>Could not parse csv file</h1>';
+			return;
+		}
 		$headerRow = array_shift($csv);
 		$processedCsv = array();
 		foreach($csv as $rowKey => $row){
