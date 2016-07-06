@@ -14,30 +14,29 @@ if (isset($_GET['code'])) { // if the code param has been sent to this page... w
     $token = $shopifyClient->getAccessToken($_GET['code']);
     if ($token != '') {
         $shop = $_GET['shop'];
-            
+
+        $toWrite = array();            
         $f = file('tokens');
+        if($f!==FALSE) {
+            // check if this shop is already authorized, if so remove the old key
+            foreach($f as $pair){
+                $pair = trim($pair);
+                if( empty($pair) )
+                    continue;
 
-        // check if this shop is already authorized, if so remove the old key
-        $toWrite = array();
-        foreach($f as $pair){
-            $pair = trim($pair);
-            if( empty($pair) )
-                continue;
+                if(strpos($pair,$shop) === 0)
+                    continue;
 
-            if(strpos($pair,$shop) === 0)
-                continue;
-
-            $toWrite[] = $pair;
+                $toWrite[] = $pair;
+            }
         }
 
         $toWrite[] = "{$shop}|{$token}";
         $toWrite = implode("\n",$toWrite);
         
-        chmod('tokens',0777);
         $fhandle = fopen('tokens','w');
         fwrite($fhandle,$toWrite);
         fclose($fhandle);
-        // chmod('tokens',0644);
     }
 
     header("Location: https://{$shop}/admin/products");
