@@ -7,36 +7,12 @@ $headers = apache_request_headers();
 
 if (isset($_GET['code'])) { // if the code param has been sent to this page... we are in Step 2
     // Step 2: do a form POST to get the access token
-    $shopifyClient = new ShopifyClient($_GET['shop'], "", API_KEY, API_SECRET);
-    session_unset();
+    $shopifyClient = new ShopifyClientWrapper($_GET['shop'], "", API_KEY, API_SECRET);
 
     // Now, request the token and store it in your session.
     $token = $shopifyClient->getAccessToken($_GET['code']);
     if ($token != '') {
-        $shop = $_GET['shop'];
-
-        $toWrite = array();            
-        $f = file('tokens');
-        if($f!==FALSE) {
-            // check if this shop is already authorized, if so remove the old key
-            foreach($f as $pair){
-                $pair = trim($pair);
-                if( empty($pair) )
-                    continue;
-
-                if(strpos($pair,$shop) === 0)
-                    continue;
-
-                $toWrite[] = $pair;
-            }
-        }
-
-        $toWrite[] = "{$shop}|{$token}";
-        $toWrite = implode("\n",$toWrite);
-        
-        $fhandle = fopen('tokens','w');
-        fwrite($fhandle,$toWrite);
-        fclose($fhandle);
+        $shopifyClient->saveToken($token);
     }
 
     header("Location: https://{$shop}/admin/products");
@@ -71,16 +47,10 @@ else if ( strpos($headers['Referer'], 'https://apps.shopify.com') === 0) {
 
 }
 
-$f = file('tokens',FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES );
-// echo'<pre>';var_export($f);echo'</pre>';
-// die;
-foreach($f as $row) {
-    list($store,$token) = explode('|', $row);
-    if($store == STORE_NAME) {
-        $s = new ShopifyClientWrapper(STORE_NAME,trim($token),API_KEY,API_SECRET);
-        break;
-    }
-}
 
-if( ! isset($s) )
+
+$s = new ShopifyClientWrapper($_GET['shop'], "", API_KEY, API_SECRET);
+if($token = $s->getSavedToken() )
+    $s->setToken($token);
+else
     die('Error: not installed perhaps');

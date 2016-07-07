@@ -6,6 +6,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 	private $password;
 	private $secret;
 	var $url;
+	private $db = false;
 
 	// function __construct($url,$apiKey,$password) {
 	// 	$this->apiKey = $apiKey;
@@ -70,6 +71,44 @@ class ShopifyClientWrapper extends ShopifyClient {
 	// 	curl_close($curl);
 	// 	return $result;
 	// }
+
+	function getDB() {
+		if( $this->db === false) :
+			$this->db = new mysqli(DB_HOST,DB_USER,DB_PASS,DB_NAME);
+			if(mysqli_connect_error())
+    			die('Could not connect to database');
+    	endif;
+    	return $this->db;
+	}
+
+	function getSavedToken(){
+		$store = $this->shop_domain;
+		$db = $this->getDB();
+		$stmt = $db->prepare("SELECT token FROM inventory_sync_tokens WHERE store = ?");
+		$stmt->bind_param('s',$store);
+		$stmt->execute();
+		$stmt->bind_result($token);
+		$stmt->fetch();
+		return (!$token) ? false : $token;
+	}
+
+	function saveToken($token){
+		$store = $this->shop_domain;
+		$db = $this->getDB();
+		if($this->getSavedToken())
+			$sql = "UPDATE inventory_sync_tokens SET token=? WHERE store=?";
+		else
+			$sql = "INSERT INTO inventory_sync_tokens (token,store) VALUES (?,?)";
+
+		$stmt = $db->prepare($sql);
+		$stmt->bind_param('ss',$token,$store);
+		$stmt->execute();
+		if($stmt->affected_rows == -1 )
+			return false;
+		return $stmt->affected_rows;
+	}
+
+
 
 	function getProductCount() {
 		$resp = $this->call('GET','admin/products/count.json');
