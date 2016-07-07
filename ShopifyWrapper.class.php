@@ -150,7 +150,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 
 	function updateItem($type,$id,$updatefields){
 		$data[$type] = array_merge(array(
-			'id' => (int) $id,
+			'id' => $id,
 			),$updatefields);
 		$result = $this->call('PUT',"admin/{$type}s/{$id}.json",$data);
 		// $result = json_decode($result);

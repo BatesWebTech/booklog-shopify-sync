@@ -51,7 +51,8 @@ class ShopifyInventory {
 					echo '<li>Updated barcode <b>'.$res['barcode'].'</b>: changed quantity to <b>'.$res['inventory_quantity'] . '</b></li>';
 				}
 			} catch (ShopifyApiException $e) {
-				echo '<li style="color:red">Error: '. json_encode($res['errors']) .'</li>';
+				$err = $e->getResponse();
+				echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
 				$this->countErrored(1);
 			}
 			// $res = $s->updateVariant($vid,$newData);
@@ -72,6 +73,10 @@ class ShopifyInventory {
 		echo '<ol>';
 		foreach($products as $product) {
 			foreach($product['variants'] as $variant){
+
+				if( ! $variant['barcode'] )
+					continue;
+
 				if( array_key_exists($variant['barcode'],$this->quantityUpdates) ) {
 	
 					$this->countMatched(1);
@@ -87,11 +92,13 @@ class ShopifyInventory {
 					if( $quantity == $oldQuantity)
 						continue;
 
-					$this->updatesToRun[ $variant['id'] ] = array(
+					// must cast as a string, otherwise the array falls over
+					$idAsString = (string) $variant['id'];
+					$this->updatesToRun[ $idAsString ] = array(
 						'inventory_quantity' => $quantity,
 						'old_inventory_quantity' => $oldQuantity
 					);
-
+					
 					// run the batch 20 at a time. 
 					if( count($this->updatesToRun) > 20 )
 						$this->doBatchVariantUpdates();
@@ -143,6 +150,7 @@ class ShopifyInventory {
 
 			$toUpdate[ $barcode ] = $inventoryCount;
 		}
+		// echo'<pre>';var_export($toUpdate);echo'</pre>';die;
 		$this->setQuantityUpdates( $toUpdate );
 	}
 
