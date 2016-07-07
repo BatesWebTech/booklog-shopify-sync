@@ -15,7 +15,7 @@ if (isset($_GET['code'])) { // if the code param has been sent to this page... w
         $shopifyClient->saveToken($token);
     }
 
-    header("Location: https://{$shop}/admin/products");
+    header("Location: https://{$_GET['shop']}/admin/products");
     exit;
 }
 // if they posted the form with the shop name
