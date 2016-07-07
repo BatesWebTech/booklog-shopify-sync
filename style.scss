@@ -1,3 +1,54 @@
+@mixin keyframes($name) {
+
+	@-ms-keyframes #{$name} {
+		@content
+	}
+	@-o-keyframes #{$name} {
+		@content
+	}
+	@-moz-keyframes #{$name} {
+		@content
+	}
+	@-webkit-keyframes #{$name} {
+		@content
+	}
+	@keyframes #{$name} {
+		@content
+	}
+}
+
+@mixin animation($val) {
+	-ms-animation: $val;
+	-o-animation: $val;
+	-webkit-animation: $val;
+	-moz-animation: $val;
+	animation: $val;
+}
+
+@include keyframes(rotate) {
+  0%    { transform: rotate(0deg); }
+  100%  { transform: rotate(360deg); }
+}
+
+.loading:after {
+	content: '';
+	display: block;
+	position: absolute;
+	z-index: 101;
+	border-radius: 50%;
+
+	@include animation(rotate .8s infinite linear);
+
+	border: 5px solid currentColor;
+	border-right-color: transparent !important;
+
+	padding: 12px;
+	left: calc( 50% - 12px );
+	top: 30%;
+
+	transition: .3s;
+}
+
 body {
 	font-size: 14pt;
 }
@@ -27,6 +78,7 @@ body {
 .upload-csv {
 	margin: 1.1em;
 	padding: .8em;
+	position: relative;
 
 	label {
 		display: block;
@@ -43,5 +95,46 @@ body {
 	input[type="file"], input[type="text"] {
 		padding: .5em;
 		font-size: .9em;
+	}
+
+}
+
+.upload-csv.loading {
+
+	&:after {
+		color: hsl(231, 73%, 54%); 
+	}
+
+	input, label
+	{
+		opacity: .2;
+	}
+}
+
+.results-table {
+	width: 96%;
+	margin: 1em auto;
+	border-collapse: collapse;
+
+	td {
+		padding: .4em;
+	}
+
+	tr:nth-child(2n+1) td {
+		background: hsl(0,0%,87%);
+	}
+
+	tr.heading-row td {
+		background: hsl(0,0,20%);
+		color: hsl(0,0%,95%);
+	}
+
+	td.success {
+		font-weight: bold;
+	}
+
+	.display-numeric {
+		text-align: right;
+		padding-right: 1em;
 	}
 }

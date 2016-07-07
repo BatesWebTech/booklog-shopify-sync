@@ -4,6 +4,7 @@ class ShopifyInventory {
 
 	var $updatesToRun = array();
 	var $quantityUpdates;
+	var $notChanged = array();
 
 	var $counts = array(
 		'matched' => 0,
@@ -39,30 +40,51 @@ class ShopifyInventory {
 		$this->quantityUpdates = $vals;
 	}
 
+	function printResultRow($custom) {
+		$td = array_merge(array(
+			'title' => '',
+			'barcode' => '',
+			'oldQuantity' => '',
+			'newQuantity' => ''
+		),$custom);
+
+		return <<<ROW
+		<tr>
+			<td>{$td['title']}</td>
+			<td>{$td['barcode']}</td>
+			<td class="display-numeric">{$td['oldQuantity']}</td>
+			<td class="display-numeric success">{$td['newQuantity']}</td>
+ROW;
+	}
+
 	function doBatchVariantUpdates(){
 		global $s;
-		foreach($this->updatesToRun as $vid => $newData){
+		foreach($this->updatesToRun as $vid => $data){
 			usleep(500000); // rate limit to .5 seconds so we dont' hit our api limit
+			$newData = $data['newData'];
+			$oldData = $data['oldData'];
 			try {
 				$res = $s->updateVariant($vid,$newData);
 				if( ! array_key_exists('errors', $res) ) {
 
+					// the "old_inventory_quantity" in the result set is not actually the old inventory. 
+					// That value is more for values that might get changed during the transmission of
+					// the updated data.
+					// So we use the value that we saved earlier for the output below
 					$this->countUpdated(1);
-					echo '<li>Updated barcode <b>'.$res['barcode'].'</b>: changed quantity to <b>'.$res['inventory_quantity'] . '</b></li>';
+					echo $this->printResultRow(array(
+						'title' => $oldData['title'],
+						'barcode' => $res['barcode'],
+						'newQuantity' => $res['inventory_quantity'],
+						'oldQuantity' => $newData['old_inventory_quantity']
+					));
+
 				}
 			} catch (ShopifyApiException $e) {
 				$err = $e->getResponse();
 				echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
 				$this->countErrored(1);
 			}
-			// $res = $s->updateVariant($vid,$newData);
-			// if( property_exists($res,'errors')) {
-			// 	echo '<li style="color:red">Error: '. json_encode($res->errors) .'</li>';
-			// 	$this->countErrored(1);
-			// } else {
-			// 	$this->countUpdated(1);
-			// 	echo '<li>Updated barcode <b>'.$res->variant->barcode.'</b> to quantity <b>'.$res->variant->inventory_quantity . '</b></li>';
-			// }
 		}
 		$this->updatesToRun = array();
 	}
@@ -70,7 +92,16 @@ class ShopifyInventory {
 	function updateInventory() {
 		global $s;
 		$products = $s->getAllProducts();
-		echo '<ol>';
+		echo '<table class="results-table">
+				<tr>
+					<th>Title</th>
+					<th>Barcode</th>
+					<th>Old Inventory</th>
+					<th>Updated Inventory</th>
+				</tr>
+				<tr class="heading-row">
+					<td colspan="4" ><h3>Updated</h3></td>
+				</tr>';
 		foreach($products as $product) {
 			foreach($product['variants'] as $variant){
 
@@ -81,23 +112,39 @@ class ShopifyInventory {
 	
 					$this->countMatched(1);
 
-					$quantity = $this->quantityUpdates[ $variant['barcode'] ];
+					$title = $this->quantityUpdates[ $variant['barcode'] ]['title'];
+					$quantity = $this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity'];
 					$oldQuantity = $variant['inventory_quantity'];
 
+					$idAsString = (string) $variant['id'];
+
+					$variantCustomData = array(
+						'oldData' => array(
+							'title' => $title,
+							'barcode' => $variant['barcode']
+						),
+						'newData' => array(
+							'inventory_quantity' => $quantity,
+							'old_inventory_quantity' => $oldQuantity
+						)
+					);
+
 					// if Shopify is set not to track inventory, skip this one
-					if( $variant['inventory_management'] != 'shopify' )
+					if( $variant['inventory_management'] != 'shopify' ) {
+						$variantCustomData['newData']['inventory_quantity'] = 'untracked by Shopify';
+						$variantCustomData['newData']['old_inventory_quantity'] = 'untracked by Shopify';
+						$this->notChanged[ $idAsString ] = $variantCustomData;
 						continue;
+					}
 
 					// only need to update if the quantity is different.
-					if( $quantity == $oldQuantity)
+					if( $quantity == $oldQuantity) {
+						$this->notChanged[ $idAsString ] = $variantCustomData;
 						continue;
+					}
 
 					// must cast as a string, otherwise the array falls over
-					$idAsString = (string) $variant['id'];
-					$this->updatesToRun[ $idAsString ] = array(
-						'inventory_quantity' => $quantity,
-						'old_inventory_quantity' => $oldQuantity
-					);
+					$this->updatesToRun[ $idAsString ] = $variantCustomData;
 					
 					// run the batch 20 at a time. 
 					if( count($this->updatesToRun) > 20 )
@@ -109,11 +156,26 @@ class ShopifyInventory {
 			}
 		}
 		$this->doBatchVariantUpdates();
-		echo '</ol>';
 		$this->countUnmatched();
+
+		if( count( $this->notChanged ) ) {
+			echo '<tr class="heading-row">
+				<td colspan="4"><h3>Matched, no update needed</h3></td>
+			</tr>';
+
+			foreach($this->notChanged as $variant) {
+				echo $this->printResultRow(array(
+					'title' => $variant['oldData']['title'],
+					'barcode' => $variant['oldData']['barcode'],
+					'oldQuantity' => $variant['newData']['inventory_quantity']
+				));
+			}
+		}
+
+		echo '</table>';
 	}
 
-	function parseCSV($filename,$inventoryHeader,$barcodeHeader) {
+	function parseCSV($filename,$inventoryHeader,$barcodeHeader,$titleHeader) {
 		//  str_getcsv not in < php 5.3, use fgetcsv instead
 		$csv = array();
 		if( function_exists('str_getcsv') ) {
@@ -147,8 +209,12 @@ class ShopifyInventory {
 		foreach($processedCsv as $row) {
 			$barcode = $row[$barcodeHeader];
 			$inventoryCount = $row[$inventoryHeader];
+			$title = $row[$titleHeader];
 
-			$toUpdate[ $barcode ] = $inventoryCount;
+			$toUpdate[ $barcode ] = array(
+				'inventory_quantity' => $inventoryCount,
+				'title' => $title
+			);
 		}
 		// echo'<pre>';var_export($toUpdate);echo'</pre>';die;
 		$this->setQuantityUpdates( $toUpdate );

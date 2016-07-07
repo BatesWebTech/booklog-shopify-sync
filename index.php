@@ -14,7 +14,16 @@ require_once 'setup.php';
 <html>
 <head>
 	<title>Bates Inventory Updater</title>
-	<link rel="stylesheet" href="style.css" type="text/css">
+	<link rel="stylesheet" href="style.css?v2" type="text/css">
+	<script src="https://cdn.shopify.com/s/assets/external/app.js"></script>
+	<script type="text/javascript">
+    ShopifyApp.init({
+      apiKey: '<?php echo API_KEY ?>',
+      shopOrigin: 'https://<?php echo STORE_NAME ?>'
+    });
+  </script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+	<script src="script.js?v2"></script>
 </head>
 <body>
 
@@ -34,7 +43,8 @@ if( isset($_POST['submit'])) :
 	$Inventory = new ShopifyInventory();
 	$inventoryCSVHeader = $_POST['csv_header_inventory'];
 	$barcodeCSVHeader = $_POST['csv_header_barcode'];
-	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader );
+	$titleCSVHeader = $_POST['csv_header_title'];
+	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
 	$Inventory->updateInventory();
 
 	echo '</div>';
@@ -66,6 +76,11 @@ endif; // end posted
 		<label for="csv_header_barcode">Column header for barcode</label>
 		<input type="text" id="csv_header_barcode" value="in_isbn" name="csv_header_barcode" />
 	</p>
+	<p>
+		<label for="csv_header_title">Column header for title</label>
+		<input type="text" id="csv_header_title" value="in_title" name="csv_header_title" />
+	</p>
+
 	<p>
 		<label for="csv">Upload a CSV</label>
 		<input type="file" name="csv" id="csv">
