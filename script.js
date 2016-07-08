@@ -9,11 +9,22 @@ jQuery(function($){
 
 		if( $(this).find('input[type="file"]').val() == '' ) {
 			e.preventDefault();
-			alert('you didn\t pick a csv file to upload');
-			$(this).removeClass('submitted');
+			alert('You didn\'t pick a csv file to upload');
+			$(this).removeClass('loading');
 		}
 
 		ShopifyApp.Bar.loadingOn();
 
 	});
+
+
+	// $('#saveResultsReport').on('click',function(e){
+		// window.print();
+	// 	e.preventDefault();
+	// 	var results = $('.results-table').html();
+	// 	$.post(ajaxurl,
+	// 	{
+	// 		action: 
+	// 	});
+	// });
 });

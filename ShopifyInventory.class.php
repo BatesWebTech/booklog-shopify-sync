@@ -5,6 +5,8 @@ class ShopifyInventory {
 	var $updatesToRun = array();
 	var $quantityUpdates;
 	var $notChanged = array();
+	var $changed = array();
+	var $errored = array();
 
 	var $counts = array(
 		'matched' => 0,
@@ -48,12 +50,23 @@ class ShopifyInventory {
 			'newQuantity' => ''
 		),$custom);
 
+		$updatedRowClass = '';
+		$oldRowClass = '';
+
+		if( $td['oldQuantity'] < $td['newQuantity'] )
+			$updatedRowClass = ' incremented ';
+		elseif( $td['oldQuantity'] > $td['newQuantity'] )
+			$updatedRowClass = ' decremented ';
+		elseif( $td['oldQuantity'] == 'untracked by Shopify' ) {
+			$updatedRowClass = $oldRowClass = ' untracked ';
+		}
+
 		return <<<ROW
 		<tr>
-			<td>{$td['title']}</td>
-			<td>{$td['barcode']}</td>
-			<td class="display-numeric">{$td['oldQuantity']}</td>
-			<td class="display-numeric success">{$td['newQuantity']}</td>
+			<td class="result-set-title">{$td['title']}</td>
+			<td class="result-set-barcode">{$td['barcode']}</td>
+			<td class="result-set-old display-numeric {$oldRowClass}">{$td['oldQuantity']}</td>
+			<td class="result-set-updated display-numeric {$updatedRowClass}">{$td['newQuantity']}</td>
 ROW;
 	}
 
@@ -69,39 +82,94 @@ ROW;
 
 					// the "old_inventory_quantity" in the result set is not actually the old inventory. 
 					// That value is more for values that might get changed during the transmission of
-					// the updated data.
-					// So we use the value that we saved earlier for the output below
+					// the updated data. So we use the value that we saved earlier for the output below
 					$this->countUpdated(1);
-					echo $this->printResultRow(array(
+					$this->changed[] = array(
 						'title' => $oldData['title'],
-						'barcode' => $res['barcode'],
+						'barcode' => $oldData['barcode'],
 						'newQuantity' => $res['inventory_quantity'],
 						'oldQuantity' => $newData['old_inventory_quantity']
-					));
+					);
 
 				}
 			} catch (ShopifyApiException $e) {
 				$err = $e->getResponse();
-				echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
+				$this->errored[] = array(
+					'title' => $oldData['title'],
+					'barcode' => $oldData['barcode'],
+					'error' => var_export($err['errors'],1)
+				);
+				// echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
 				$this->countErrored(1);
 			}
 		}
 		$this->updatesToRun = array();
 	}
 
-	function updateInventory() {
-		global $s;
-		$products = $s->getAllProducts();
+	function printUpdateReport(){
 		echo '<table class="results-table">
+		<tr>
+			<th>Title</th>
+			<th>Barcode</th>
+			<th>Old Inventory</th>
+			<th>Updated Inventory</th>
+		</tr>';
+
+
+		if( count( $this->changed ) ) {
+			echo '<tr class="heading-row">
+				<td colspan="4" ><h3>Updated</h3></td>
+			</tr>';
+			foreach($this->changed as $variant) {
+				echo $this->printResultRow(array(
+					'title' => $variant['title'],
+					'barcode' => $variant['barcode'],
+					'oldQuantity' => $variant['oldQuantity'],
+					'newQuantity' => $variant['newQuantity']
+				));
+			}
+		}
+
+		if( count( $this->notChanged ) ) {
+			echo '<tr class="heading-row">
+				<td colspan="4"><h3>Matched, no update needed</h3></td>
+			</tr>';
+
+			foreach($this->notChanged as $variant) {
+				echo $this->printResultRow(array(
+					'title' => $variant['oldData']['title'],
+					'barcode' => $variant['oldData']['barcode'],
+					'oldQuantity' => $variant['newData']['old_inventory_quantity'],
+					'newQuantity' => $variant['newData']['inventory_quantity']
+				));
+			}
+		}
+
+		echo '</table>';
+
+		if( count( $this->errored ) ) {
+			echo '<h3>'.count($this->errored).' Errors Occured</h3>
+				<table>
 				<tr>
 					<th>Title</th>
 					<th>Barcode</th>
-					<th>Old Inventory</th>
-					<th>Updated Inventory</th>
-				</tr>
-				<tr class="heading-row">
-					<td colspan="4" ><h3>Updated</h3></td>
+					<th>Error</th>
 				</tr>';
+			foreach($this->errored as $variant) {
+				echo "<tr>
+					<td>{$variant['title']}</td>
+					<td>{$variant['barcode']}</td>
+					<td>{$variant['error']}</td>
+				</tr>";
+			}
+			echo '</table>';
+		}
+	}
+
+	function updateInventory() {
+		global $s;
+		$products = $s->getAllProducts();
+
 		foreach($products as $product) {
 			foreach($product['variants'] as $variant){
 
@@ -158,21 +226,110 @@ ROW;
 		$this->doBatchVariantUpdates();
 		$this->countUnmatched();
 
-		if( count( $this->notChanged ) ) {
-			echo '<tr class="heading-row">
-				<td colspan="4"><h3>Matched, no update needed</h3></td>
-			</tr>';
+		$this->saveResultsReport();
 
-			foreach($this->notChanged as $variant) {
-				echo $this->printResultRow(array(
-					'title' => $variant['oldData']['title'],
-					'barcode' => $variant['oldData']['barcode'],
-					'oldQuantity' => $variant['newData']['inventory_quantity']
-				));
-			}
+	}
+
+	private function _serialize($val){
+		// return base64_encode(serialize($val));
+		return serialize($val);
+	}
+	private function _unserialize($val){
+		// return unserialize(base64_decode($val));
+		return unserialize($val);
+	}
+
+	function saveResultsReport() {
+		global $s;
+		$db = $s->getDB();
+
+		$save = array(
+			'errored' => $this->errored,
+			'changed' => $this->changed,
+			'notChanged' => $this->notChanged
+		);
+
+		$save = $this->_serialize($save);
+		$save = $db->real_escape_string($save);
+
+		// only allow one saved report per store
+		$id = $db->query("SELECT id FROM reports WHERE store = '{$s->shop_domain}'");
+
+		if($id->num_rows > 0 ) {
+			$id = $id->fetch_row();
+			$id = $id[0];
+			$sql = "UPDATE reports SET report = '{$save}', timestamp=NOW() WHERE id={$id}";
+		} else {
+			$sql = "INSERT INTO reports (store,report,timestamp) VALUES
+				('{$s->shop_domain}','{$save}',NOW());";
+		}
+		$result = $db->query($sql);
+
+	}
+
+	function getReport() {
+		global $s;
+		$db = $s->getDB();
+
+		$result = $db->query("SELECT report FROM reports WHERE STORE = '{$s->shop_domain}'");
+		list($report) = $result->fetch_row();
+		$report = $this->_unserialize($report);
+		return $report;
+	}
+
+	function downloadReport() {
+		if( headers_sent() )
+			die( 'Cannot download CSV, function called too late');
+
+		header ('Content-Type: text/csv; charset=UTF-8');
+		header ('Content-Disposition: attachment; filename="inventory-update-report_'.date('Y-m-d-H-i-s').'.csv"');
+
+		$report = $this->getReport();
+
+		$csv = fopen('php://output', 'w');
+
+		$headers = array(
+			'Title',
+			'Barcode',
+			'Old Inventory',
+			'Updated Inventory',
+			'Status'
+		);
+
+		fputcsv($csv, $headers);
+		// errors
+		foreach($report['errored'] as $err){
+			fputcsv($csv,array(
+				$err['title'],
+				$err['barcode'],
+				'',
+				'',
+				$err['error']
+			));
 		}
 
-		echo '</table>';
+		foreach($report['changed'] as $ch){
+			fputcsv($csv,array(
+				$ch['title'],
+				$ch['barcode'],
+				$ch['oldQuantity'],
+				$ch['newQuantity'],
+				'changed'
+			));
+		}
+
+		foreach ($report['notChanged'] as $nc) {
+			fputcsv($csv,array(
+				$nc['oldData']['title'],
+				$nc['oldData']['barcode'],
+				$nc['newData']['inventory_quantity'],
+				$nc['newData']['old_inventory_quantity'],
+				'not changed'
+			));
+		}
+
+		fclose($csv);
+		exit;
 	}
 
 	function parseCSV($filename,$inventoryHeader,$barcodeHeader,$titleHeader) {

@@ -6,7 +6,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 	private $password;
 	private $secret;
 	var $url;
-	private $db = false;
+	public $db = false;
 
 	// function __construct($url,$apiKey,$password) {
 	// 	$this->apiKey = $apiKey;
@@ -107,7 +107,6 @@ class ShopifyClientWrapper extends ShopifyClient {
 			return false;
 		return $stmt->affected_rows;
 	}
-
 
 
 	function getProductCount() {

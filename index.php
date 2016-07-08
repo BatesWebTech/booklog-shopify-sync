@@ -8,6 +8,12 @@ require_once 'ShopifyWrapper.class.php';
 require_once 'ShopifyInventory.class.php';
 
 require_once 'setup.php';
+
+if($_POST['download_report']) {
+	$Inventory = new ShopifyInventory();
+	$Inventory->downloadReport();
+	exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -17,24 +23,23 @@ require_once 'setup.php';
 	<link rel="stylesheet" href="style.css?v2" type="text/css">
 	<script src="https://cdn.shopify.com/s/assets/external/app.js"></script>
 	<script type="text/javascript">
+	var shop = 'https://<?php echo STORE_NAME ?>';
+	ajaxurl = shop + '/ajax.php';
     ShopifyApp.init({
       apiKey: '<?php echo API_KEY ?>',
-      shopOrigin: 'https://<?php echo STORE_NAME ?>'
+      shopOrigin: shop
     });
   </script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
-	<script src="script.js?v2"></script>
+	<script src="script.js?v3"></script>
 </head>
 <body>
 
 <?php
 
-if( isset($_POST['submit'])) :
+if( isset($_POST['submit'])) {
 
 	if( $_FILES['csv']['tmp_name'] != '' ) {
-
-
-	echo '<div class="ouput">';
 
 	// Parse CSV
 	/* This is in format
@@ -45,10 +50,8 @@ if( isset($_POST['submit'])) :
 	$barcodeCSVHeader = $_POST['csv_header_barcode'];
 	$titleCSVHeader = $_POST['csv_header_title'];
 	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
+	
 	$Inventory->updateInventory();
-
-	echo '</div>';
-
 	?> 
 	
 	<div class="finish-message">
@@ -56,13 +59,30 @@ if( isset($_POST['submit'])) :
 		<p class="success">Updated <?php echo $Inventory->countUpdated() ?> product variants</p>
 		<p class="warning">No changes to <?php echo ($Inventory->countMatched() - $Inventory->countUpdated()) ?> product variants.</p>
 		<p class="error">Errored <?php echo $Inventory->countErrored() ?> times.</p>
+		<form action="" method="POST">
+			<input type="hidden" name="download_report" value="1">
+			<button id="saveResultsReport">Download results</button>
+		</form>
 	</div>
 
 <?php
+	$Inventory->printUpdateReport();
+
 	}
-endif; // end posted
+
+} else {
+	?>
+	
+	<form action="" method="POST" class="download-report-form page-top">
+		<input type="hidden" name="download_report" value="1">
+		<button id="saveResultsReport">Download last report</button>
+	</form>
+
+<?php
+} // end posted
 
 ?>
+
 
 <form method="post" action="" enctype="multipart/form-data" class="upload-csv">
 
