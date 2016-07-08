@@ -11,8 +11,11 @@ require_once 'setup.php';
 
 if($_POST['download_report']) {
 	$Inventory = new ShopifyInventory();
-	$Inventory->downloadReport();
-	exit;
+	$result = $Inventory->downloadReport();
+	if(!$result)
+		echo 'No previous saved report';
+	else
+		exit;
 }
 ?>
 

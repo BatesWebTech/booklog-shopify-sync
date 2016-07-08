@@ -272,6 +272,8 @@ ROW;
 		$db = $s->getDB();
 
 		$result = $db->query("SELECT report FROM reports WHERE STORE = '{$s->shop_domain}'");
+		if($result->num_rows == 0)
+			return false;
 		list($report) = $result->fetch_row();
 		$report = $this->_unserialize($report);
 		return $report;
@@ -281,10 +283,13 @@ ROW;
 		if( headers_sent() )
 			die( 'Cannot download CSV, function called too late');
 
+		$report = $this->getReport();
+		if(!$report)
+			return false;
+
 		header ('Content-Type: text/csv; charset=UTF-8');
 		header ('Content-Disposition: attachment; filename="inventory-update-report_'.date('Y-m-d-H-i-s').'.csv"');
 
-		$report = $this->getReport();
 
 		$csv = fopen('php://output', 'w');
 
