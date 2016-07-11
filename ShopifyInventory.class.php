@@ -7,6 +7,8 @@ class ShopifyInventory {
 	var $notChanged = array();
 	var $changed = array();
 	var $errored = array();
+	var $notMatched = array();
+	var $OKAYTOCOUNTUNMATCHED = false;
 
 	var $counts = array(
 		'matched' => 0,
@@ -32,6 +34,13 @@ class ShopifyInventory {
 		return $this->count('updated',$num);
 	}
 	function countUnmatched() {
+		if( ! $this->OKAYTOCOUNTUNMATCHED ) {
+			$msg = 'You called countUnmatched too early. You have to updateInventory first';
+			error_log($msg);
+			echo $msg;
+			return false;
+		}
+		$this->notMatched = $this->quantityUpdates;
 		return ($this->countCsvRows() - $this->countMatched() );
 	}
 	function countCsvRows($num=false) {
@@ -42,7 +51,7 @@ class ShopifyInventory {
 		$this->quantityUpdates = $vals;
 	}
 
-	function printResultRow($custom) {
+	function printResultRow($custom,$classes='') {
 		$td = array_merge(array(
 			'title' => '',
 			'barcode' => '',
@@ -62,7 +71,7 @@ class ShopifyInventory {
 		}
 
 		return <<<ROW
-		<tr>
+		<tr class="{$classes}">
 			<td class="result-set-title">{$td['title']}</td>
 			<td class="result-set-barcode">{$td['barcode']}</td>
 			<td class="result-set-old display-numeric {$oldRowClass}">{$td['oldQuantity']}</td>
@@ -126,7 +135,7 @@ ROW;
 					'barcode' => $variant['barcode'],
 					'oldQuantity' => $variant['oldQuantity'],
 					'newQuantity' => $variant['newQuantity']
-				));
+				), 'updated');
 			}
 		}
 
@@ -141,9 +150,26 @@ ROW;
 					'barcode' => $variant['oldData']['barcode'],
 					'oldQuantity' => $variant['newData']['old_inventory_quantity'],
 					'newQuantity' => $variant['newData']['inventory_quantity']
-				));
+				), 'not-changed');
 			}
 		}
+
+
+		if( count( $this->notMatched ) ) {
+			echo '<tr class="heading-row">
+				<td colspan="4"><h3>Unmatched barcodes</h3></td>
+			</tr>';
+
+			foreach($this->notMatched as $barcode => $variant) {
+				echo $this->printResultRow(array(
+					'title' => $variant['title'],
+					'barcode' => $barcode,
+					'oldQuantity' => '',
+					'newQuantity' => ''
+				),'not-matched');
+			}
+		}
+
 
 		echo '</table>';
 
@@ -197,6 +223,10 @@ ROW;
 						)
 					);
 
+					// remove this one from the quantityUpdates array b/c we've dealt with it
+					// also, then later we'll know which haven't been matched
+					unset($this->quantityUpdates[ $variant['barcode'] ]);
+
 					// if Shopify is set not to track inventory, skip this one
 					if( $variant['inventory_management'] != 'shopify' ) {
 						$variantCustomData['newData']['inventory_quantity'] = 'untracked by Shopify';
@@ -223,6 +253,7 @@ ROW;
 				}
 			}
 		}
+		$this->OKAYTOCOUNTUNMATCHED = true;
 		$this->doBatchVariantUpdates();
 		$this->countUnmatched();
 
@@ -246,7 +277,8 @@ ROW;
 		$save = array(
 			'errored' => $this->errored,
 			'changed' => $this->changed,
-			'notChanged' => $this->notChanged
+			'notChanged' => $this->notChanged,
+			'notMatched' => $this->notMatched
 		);
 
 		$save = $this->_serialize($save);
@@ -345,6 +377,15 @@ ROW;
 			));
 		}
 
+		foreach ($report['notMatched'] as $nm) {
+			fputcsv($csv,array(
+				$nm['title'],
+				$nm['barcode'],
+				'',
+				'',
+				'not matched'
+			));
+		}
 		fclose($csv);
 		exit;
 	}

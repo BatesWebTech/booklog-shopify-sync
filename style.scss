@@ -192,7 +192,7 @@ body {
 	}
  	
 
-	.untracked {
+	.untracked, .not-matched {
 		color: hsl(0, 0%, 50%);
 		font-style: italic;
 	}
