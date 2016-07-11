@@ -9,9 +9,10 @@ require_once 'ShopifyInventory.class.php';
 
 require_once 'setup.php';
 
+$Inventory = new ShopifyInventory();
+
 if($_POST['download_report']) {
-	$Inventory = new ShopifyInventory();
-	$result = $Inventory->downloadReport();
+	$result = $Inventory->downloadReport(); // this has it's own "exit" statement
 	if(!$result)
 		echo 'No previous saved report';
 	else
@@ -48,7 +49,6 @@ if( isset($_POST['submit'])) {
 	/* This is in format
 		barcode => new quantity
 	 */
-	$Inventory = new ShopifyInventory();
 	$inventoryCSVHeader = $_POST['csv_header_inventory'];
 	$barcodeCSVHeader = $_POST['csv_header_barcode'];
 	$titleCSVHeader = $_POST['csv_header_title'];
@@ -74,14 +74,18 @@ if( isset($_POST['submit'])) {
 	}
 
 } else {
-	?>
-	
-	<form action="" method="POST" class="download-report-form page-top">
-		<input type="hidden" name="download_report" value="1">
-		<button id="saveResultsReport">Download last report</button>
-	</form>
 
-<?php
+	if( $lastReportDate = $Inventory->getLastReportDate() ) {
+		
+		echo '<form action="" method="POST" class="download-report-form page-top">
+			<input type="hidden" name="download_report" value="1">
+			<p>Last report run: <b>'. date('F j, Y (g:i a)') .'</b></p>
+			<button id="saveResultsReport">Download it</button>
+		</form>
+		';
+
+	}
+
 } // end posted
 
 ?>

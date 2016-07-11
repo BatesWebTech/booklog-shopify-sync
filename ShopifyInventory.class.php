@@ -267,6 +267,18 @@ ROW;
 
 	}
 
+	function getLastReportDate() {
+		global $s;
+		$db = $s->getDB();
+
+		$result = $db->query("SELECT timestamp FROM reports WHERE STORE = '{$s->shop_domain}'");
+		if($result->num_rows == 0)
+			return false;
+		list($stamp) = $result->fetch_row();
+		return $stamp;
+		
+	}
+
 	function getReport() {
 		global $s;
 		$db = $s->getDB();

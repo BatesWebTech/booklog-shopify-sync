@@ -79,9 +79,12 @@ body {
 	}
 }
 
-.download-report-form.page-top #saveResultsReport {
+.download-report-form.page-top {
 	margin: 2em;
-	font-size: .9em;
+
+	#saveResultsReport {
+		font-size: .9em;
+	}
 }
 
 .finish-message {
