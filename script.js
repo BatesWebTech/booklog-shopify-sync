@@ -7,11 +7,11 @@ jQuery(function($){
 		// e.preventDefault();
 		$(this).addClass('loading');
 
-		// if( $(this).find('input[type="file"]').val() == '' ) {
-		// 	e.preventDefault();
-		// 	alert('You didn\'t pick a csv file to upload');
-		// 	$(this).removeClass('loading');
-		// }
+		if( $(this).find('input[type="file"]').val() == '' ) {
+			e.preventDefault();
+			alert('You didn\'t pick a csv file to upload');
+			$(this).removeClass('loading');
+		}
 
 		ShopifyApp.Bar.loadingOn();
 
