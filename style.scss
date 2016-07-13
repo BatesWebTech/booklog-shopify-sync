@@ -131,6 +131,10 @@ body {
 		font-size: .9em;
 	}
 
+	.col textarea {
+		width: 100%;
+	}
+
 }
 
 .upload-csv.loading {
@@ -139,7 +143,7 @@ body {
 		color: hsl(202,100%,37%); 
 	}
 
-	input, label
+	input, label, textarea
 	{
 		opacity: .2;
 	}
@@ -199,6 +203,22 @@ body {
 
 }
 
+.col-wrapper {
+	box-sizing: border-box;
+	.col {
+		box-sizing: border-box;
+	}
+}
+
+@media(min-width:550px) {
+	.col-wrapper {
+		display: flex;
+
+		.col.half {
+			width: 50%;
+		}
+	}
+}
 
 
 @media print {

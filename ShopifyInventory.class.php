@@ -8,7 +8,9 @@ class ShopifyInventory {
 	var $changed = array();
 	var $errored = array();
 	var $notMatched = array();
+	var $matchedBlacklist = array();
 	var $OKAYTOCOUNTUNMATCHED = false;
+	var $blacklistedBarcodes = false;
 
 	var $counts = array(
 		'matched' => 0,
@@ -47,6 +49,14 @@ class ShopifyInventory {
 		return $this->count('csv_rows',$num);
 	}
 
+	function countMatchedBlacklist() {
+		return count($this->matchedBlacklist);
+	}
+
+	function countMatchedNotUpdated() {
+		$this->countMatched() - $count->countUpdated();
+	}
+
 	function setQuantityUpdates($vals) {
 		$this->quantityUpdates = $vals;
 	}
@@ -66,7 +76,7 @@ class ShopifyInventory {
 			$updatedRowClass = ' incremented ';
 		elseif( $td['oldQuantity'] > $td['newQuantity'] )
 			$updatedRowClass = ' decremented ';
-		elseif( $td['oldQuantity'] == 'untracked by Shopify' ) {
+		elseif( $td['oldQuantity'] == 'untracked by Shopify' || $td['oldQuantity'] == 'blacklisted barcode' ) {
 			$updatedRowClass = $oldRowClass = ' untracked ';
 		}
 
@@ -227,6 +237,17 @@ ROW;
 					// also, then later we'll know which haven't been matched
 					unset($this->quantityUpdates[ $variant['barcode'] ]);
 
+					if(in_array($variant['barcode'], $this->getBlackListedBarcodes())) {
+						$variantCustomData['newData']['inventory_quantity']
+							= $variantCustomData['newData']['old_inventory_quantity']
+							= 'blacklisted barcode';
+
+						$this->notChanged[ $idAsString ] 
+							= $this->matchedBlacklist
+							= $variantCustomData;
+						continue;
+					}
+
 					// if Shopify is set not to track inventory, skip this one
 					if( $variant['inventory_management'] != 'shopify' ) {
 						$variantCustomData['newData']['inventory_quantity'] = 'untracked by Shopify';
@@ -268,6 +289,42 @@ ROW;
 	private function _unserialize($val){
 		// return unserialize(base64_decode($val));
 		return unserialize($val);
+	}
+
+	function getBlackListedBarcodes() {
+		if($this->blacklistedBarcodes===FALSE) {
+			$this->blacklistedBarcodes = array();
+			global $s;
+			$db = $s->getDB();
+			$sql = "SELECT barcode FROM barcodes WHERE action = 'blacklist' AND store = '{$s->shop_domain}'";
+			$res = $db->query($sql);
+			if($res->num_rows > 0) {
+				while($barcode = $res->fetch_array(MYSQLI_NUM))
+					$this->blacklistedBarcodes[] = $barcode[0];
+			}
+		}
+		return $this->blacklistedBarcodes;
+	}
+
+	function saveBlackListedBarcodes($barcodes) {
+		if( empty($barcodes) )
+			return false;
+		global $s;
+		$db = $s->getDB();
+		$barcodes = explode("\n",$barcodes);
+
+		// remove previously saved barcodes
+		$db->query("DELETE FROM barcodes WHERE store='{$s->shop_domain}' AND action='blacklist'");
+
+		$stmt = $db->prepare("INSERT INTO barcodes (store,barcode,action) VALUES ('{$s->shop_domain}',?,'blacklist');");
+
+		foreach($barcodes as $bc) {
+			$bc = trim($bc);
+			if( empty($bc) ) continue;
+
+			$stmt->bind_param('s',$bc);
+			$stmt->execute();
+		}
 	}
 
 	function saveResultsReport() {
@@ -431,7 +488,7 @@ ROW;
 				'title' => $title
 			);
 		}
-		// echo'<pre>';var_export($toUpdate);echo'</pre>';die;
+
 		$this->setQuantityUpdates( $toUpdate );
 	}
 

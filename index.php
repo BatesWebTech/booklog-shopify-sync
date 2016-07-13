@@ -43,6 +43,8 @@ if($_POST['download_report']) {
 
 if( isset($_POST['submit'])) {
 
+	$Inventory->saveBlackListedBarcodes($_POST['blacklist']);
+
 	if( $_FILES['csv']['tmp_name'] != '' ) {
 
 	// Parse CSV
@@ -60,7 +62,7 @@ if( isset($_POST['submit'])) {
 	<div class="finish-message">
 		<p>Matched <b><?php echo $Inventory->countMatched() ?></b> out of <b><?php echo $Inventory->countCsvRows() ?></b> barcodes.</p>
 		<p class="success">Updated <?php echo $Inventory->countUpdated() ?> product variants</p>
-		<p class="warning">No changes to <?php echo ($Inventory->countMatched() - $Inventory->countUpdated()) ?> product variants.</p>
+		<p class="warning">No changes to <?php echo ($Inventory->countMatched() - $Inventory->countUpdated()) ?> product variants (<?php echo $Inventory->countMatchedBlacklist() ?> barcodes ignored from blacklist).</p>
 		<p class="error">Errored <?php echo $Inventory->countErrored() ?> times.</p>
 		<form action="" method="POST">
 			<input type="hidden" name="download_report" value="1">
@@ -95,28 +97,46 @@ if( isset($_POST['submit'])) {
 
 	<h2>Update Inventory</h2>
 
-	<p>
-		<label for="csv_header_inventory">Column header for quantity</label>	
-		<input type="text" id="csv_header_inventory" value="in_qty_onhand" name="csv_header_inventory" />
-	</p>
-	<p>
-		<label for="csv_header_barcode">Column header for barcode</label>
-		<input type="text" id="csv_header_barcode" value="in_isbn" name="csv_header_barcode" />
-	</p>
-	<p>
-		<label for="csv_header_title">Column header for title</label>
-		<input type="text" id="csv_header_title" value="in_title" name="csv_header_title" />
-	</p>
+	<div class="col-wrapper">
+		<div class="col half">
+			<p>
+				<label for="csv_header_inventory">Column header for quantity</label>	
+				<input type="text" id="csv_header_inventory" value="in_qty_onhand" name="csv_header_inventory" />
+			</p>
+			<p>
+				<label for="csv_header_barcode">Column header for barcode</label>
+				<input type="text" id="csv_header_barcode" value="in_isbn" name="csv_header_barcode" />
+			</p>
+			<p>
+				<label for="csv_header_title">Column header for title</label>
+				<input type="text" id="csv_header_title" value="in_title" name="csv_header_title" />
+			</p>
 
-	<p>
-		<label for="csv">Upload a CSV</label>
-		<input type="file" name="csv" id="csv">
-	</p>
+			<p>
+				<label for="csv">Upload a CSV</label>
+				<input type="file" name="csv" id="csv">
+			</p>
+		</div>
+
+		<div class="col half">
+			<p>
+				<label for="blacklist">List barcodes to ignore, one on each line. These will be remembered between uploads.</label>
+				<?php 	
+				$saved_barcodes = $Inventory->getBlackListedBarcodes();
+				$saved_barcodes = implode("\n",$saved_barcodes);
+				 ?>
+				<textarea name="blacklist" style="height:285px;"><?php echo $saved_barcodes ?></textarea>
+			</p>
+		</div>
+	</div>
+	
 	<p>
 		<input type="submit" value="Run Update" name="submit">
 	</p>
 
 </form>
+
+
 
 
 </body>
