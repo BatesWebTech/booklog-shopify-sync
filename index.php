@@ -11,7 +11,7 @@ require_once 'setup.php';
 
 $Inventory = new ShopifyInventory();
 
-if($_POST['download_report']) {
+if( isset($_POST['download_report']) ) {
 	$result = $Inventory->downloadReport(); // this has it's own "exit" statement
 	if(!$result)
 		echo 'No previous saved report';
@@ -57,6 +57,7 @@ if( isset($_POST['submit'])) {
 	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
 	
 	$Inventory->updateInventory();
+
 	?> 
 	
 	<div class="finish-message">

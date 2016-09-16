@@ -8,9 +8,11 @@ class ShopifyInventory {
 	var $changed = array();
 	var $errored = array();
 	var $notMatched = array();
+	var $notMatchedFromShopify = array();
 	var $matchedBlacklist = array();
 	var $OKAYTOCOUNTUNMATCHED = false;
 	var $blacklistedBarcodes = false;
+	var $debugging = false;
 
 	var $counts = array(
 		'matched' => 0,
@@ -35,6 +37,9 @@ class ShopifyInventory {
 	function countUpdated($num=false) {
 		return $this->count('updated',$num);
 	}
+	/** 
+	 * Count the rows from the uploaded spreadsheet which were not matched
+	 */
 	function countUnmatched() {
 		if( ! $this->OKAYTOCOUNTUNMATCHED ) {
 			$msg = 'You called countUnmatched too early. You have to updateInventory first';
@@ -97,6 +102,8 @@ ROW;
 			$oldData = $data['oldData'];
 			try {
 				$res = $s->updateVariant($vid,$newData);
+				// $this->debug(array('id'=>$vid,'data'=>$newData),'Called updateVariant() with these params');
+				// $this->debug($res,'- - got these results');
 				if( ! array_key_exists('errors', $res) ) {
 
 					// the "old_inventory_quantity" in the result set is not actually the old inventory. 
@@ -180,6 +187,21 @@ ROW;
 			}
 		}
 
+		if( count( $this->notMatchedFromShopify ) ) {
+			echo '<tr class="heading-row">
+				<td colspan="4"><h3>Products in Shopify that weren\'t matched in the upload</h3></td>
+			</tr>';
+
+			foreach($this->notMatchedFromShopify as $barcode => $variant) {
+				echo $this->printResultRow(array(
+					'title' => $variant['title'],
+					'barcode' => $barcode,
+					'oldQuantity' => '',
+					'newQuantity' => ''
+				),'not-matched');
+			}
+		}
+
 
 		echo '</table>';
 
@@ -209,11 +231,17 @@ ROW;
 		foreach($products as $product) {
 			foreach($product['variants'] as $variant){
 
-				if( ! $variant['barcode'] )
+				if( ! $variant['barcode'] ) {
+					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
+					// $this->debug("{$variant['title']}", "skipped because no barcode (shopify variant title) ");
 					continue;
+				}
 
 				if( array_key_exists($variant['barcode'],$this->quantityUpdates) ) {
 	
+					if( is_null($this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity']) )
+						$this->debug($this->quantityUpdates[ $variant['barcode'] ],'This barcode had strangeness');
+
 					$this->countMatched(1);
 
 					$title = $this->quantityUpdates[ $variant['barcode'] ]['title'];
@@ -238,6 +266,7 @@ ROW;
 					unset($this->quantityUpdates[ $variant['barcode'] ]);
 
 					if(in_array($variant['barcode'], $this->getBlackListedBarcodes())) {
+						// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist');
 						$variantCustomData['newData']['inventory_quantity']
 							= $variantCustomData['newData']['old_inventory_quantity']
 							= 'blacklisted barcode';
@@ -250,6 +279,7 @@ ROW;
 
 					// if Shopify is set not to track inventory, skip this one
 					if( $variant['inventory_management'] != 'shopify' ) {
+						// $this->debug($variant['barcode'],'Barcode skipped cuz shopify is not tracking its inventory');
 						$variantCustomData['newData']['inventory_quantity'] = 'untracked by Shopify';
 						$variantCustomData['newData']['old_inventory_quantity'] = 'untracked by Shopify';
 						$this->notChanged[ $idAsString ] = $variantCustomData;
@@ -270,7 +300,8 @@ ROW;
 						$this->doBatchVariantUpdates();
 
 				} else {
-					
+					// the shopify barcode is not in the uploaded file
+					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
 				}
 			}
 		}
@@ -335,7 +366,8 @@ ROW;
 			'errored' => $this->errored,
 			'changed' => $this->changed,
 			'notChanged' => $this->notChanged,
-			'notMatched' => $this->notMatched
+			'notMatched' => $this->notMatched,
+			'notMatchedFromShopify' => $this->notMatchedFromShopify
 		);
 
 		$save = $this->_serialize($save);
@@ -440,9 +472,20 @@ ROW;
 				$nm['barcode'],
 				'',
 				'',
-				'not matched'
+				'not matched (product from uploaded csv)'
 			));
 		}
+
+		foreach ($report['notMatchedFromShopify'] as $nms) {
+			fputcsv($csv,array(
+				$nms['title'],
+				$nms['barcode'],
+				'',
+				'',
+				'not matched (product in Shopify)'
+			));
+		}
+
 		fclose($csv);
 		exit;
 	}
@@ -470,6 +513,7 @@ ROW;
 				$processedCsv[$rowKey][ $headerRow[$k] ] = $v;
 			}
 		}
+		// $this->debug($processedCsv);
 		unset($csv);
 		$this->countCsvRows( count($processedCsv) );
 		// $inventoryKey = array_search($inventoryHeader, $headerRow );
@@ -488,6 +532,16 @@ ROW;
 		}
 
 		$this->setQuantityUpdates( $toUpdate );
+	}
+
+	function debug($value,$title=false){
+		if( ! $this->debugging) return false;
+
+		if($title)
+			echo '<p style="margin:0;padding:0"><b>'.$title.'</b></p>';
+		echo '<pre style="font-size:9px;background:hsl(0,0%,94%);padding:1em;">';
+		var_export($value);
+		echo '</pre>';
 	}
 
 }
