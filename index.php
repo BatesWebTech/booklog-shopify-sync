@@ -82,7 +82,7 @@ if( isset($_POST['submit'])) {
 		
 		echo '<form action="" method="POST" class="download-report-form page-top">
 			<input type="hidden" name="download_report" value="1">
-			<p>Last report run: <b>'. date('F j, Y (g:i a)') .'</b></p>
+			<p>Last report run: <b>'. date('F j, Y (g:i a)',strtotime($lastReportDate)) .'</b></p>
 			<button id="saveResultsReport">Download it</button>
 		</form>
 		';
