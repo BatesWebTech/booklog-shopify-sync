@@ -24,7 +24,7 @@ if( isset($_POST['download_report']) ) {
 <html>
 <head>
 	<title>Bates Inventory Updater</title>
-	<link rel="stylesheet" href="style.css?v4" type="text/css">
+	<link rel="stylesheet" href="style.css?v5" type="text/css">
 	<script src="https://cdn.shopify.com/s/assets/external/app.js"></script>
 	<script type="text/javascript">
 	var shop = 'https://<?php echo STORE_NAME ?>';
