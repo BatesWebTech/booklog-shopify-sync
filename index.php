@@ -55,7 +55,6 @@ if( isset($_POST['upload-csv'])) {
 	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
 	
 	$Inventory->updateInventory();
-	var_export($Inventory->matchedBlacklist);
 
 	?> 
 	
@@ -88,12 +87,11 @@ if( $lastReportDate = $Inventory->getLastReportDate() ) {
 
 
 if( isset($_POST['save-blacklist']) ){
-	$blacklist = [];
+	$blacklist = array();
 	foreach($_POST['blacklist'] as $key=>$blEntry){
 		if( ! empty($blEntry['barcode']) )
 			$blacklist[] = $blEntry;
 	}
-	echo'<pre>-- $blacklist --<br>';var_export($blacklist);echo'</pre>';
 	$Inventory->saveBlackListedBarcodes($blacklist);
 	echo '<div class="finish-message">Updated Ignored Barcodes</div>';
 }

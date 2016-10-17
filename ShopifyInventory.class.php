@@ -344,7 +344,7 @@ ROW;
 		}
 		$blacklistedBarcodes = $this->blacklistedBarcodes;
 		if( ! $withNotes ) {
-			$transfer= [];
+			$transfer= array();
 			foreach($blacklistedBarcodes as $key=>$bc){
 				$transfer[] = $bc['barcode'];
 			}
