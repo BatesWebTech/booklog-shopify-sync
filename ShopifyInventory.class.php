@@ -272,7 +272,7 @@ ROW;
 							= 'blacklisted barcode';
 
 						$this->notChanged[ $idAsString ] 
-							= $this->matchedBlacklist
+							= $this->matchedBlacklist[]
 							= $variantCustomData;
 						continue;
 					}
@@ -322,7 +322,8 @@ ROW;
 		return unserialize($val);
 	}
 
-	function getBlackListedBarcodes() {
+	function getBlackListedBarcodes($withNotes = false) {
+		// save in cache if not already
 		if($this->blacklistedBarcodes===FALSE) {
 			$this->blacklistedBarcodes = array();
 			global $s;
@@ -330,11 +331,26 @@ ROW;
 			$sql = "SELECT barcode FROM barcodes WHERE action = 'blacklist' AND store = '{$s->shop_domain}'";
 			$res = $db->query($sql);
 			if($res->num_rows > 0) {
-				while($barcode = $res->fetch_array(MYSQLI_NUM))
-					$this->blacklistedBarcodes[] = $barcode[0];
+				while($barcode = $res->fetch_array(MYSQLI_NUM)) {
+					$thisBarcode = $this->maybe_unserialize($barcode[0]);
+					if( is_array($thisBarcode) )
+						$this->blacklistedBarcodes[] = $thisBarcode;
+					else {
+						// backward compat
+						$this->blacklistedBarcodes[] = array('barcode'=>$thisBarcode,'reason'=>'');
+					}
+				}
 			}
 		}
-		return $this->blacklistedBarcodes;
+		$blacklistedBarcodes = $this->blacklistedBarcodes;
+		if( ! $withNotes ) {
+			$transfer= [];
+			foreach($blacklistedBarcodes as $key=>$bc){
+				$transfer[] = $bc['barcode'];
+			}
+			$blacklistedBarcodes = $transfer;
+		}
+		return $blacklistedBarcodes;
 	}
 
 	function saveBlackListedBarcodes($barcodes) {
@@ -342,7 +358,7 @@ ROW;
 			return false;
 		global $s;
 		$db = $s->getDB();
-		$barcodes = explode("\n",$barcodes);
+		// $barcodes = explode("\n",$barcodes);
 
 		// remove previously saved barcodes
 		$db->query("DELETE FROM barcodes WHERE store='{$s->shop_domain}' AND action='blacklist'");
@@ -350,8 +366,11 @@ ROW;
 		$stmt = $db->prepare("INSERT INTO barcodes (store,barcode,action) VALUES ('{$s->shop_domain}',?,'blacklist');");
 
 		foreach($barcodes as $bc) {
-			$bc = trim($bc);
-			if( empty($bc) ) continue;
+			if( is_array($bc) && empty($bc['barcode']) ) continue;
+
+			$bc = $this->_serialize($bc);
+			// $bc = trim($bc);
+			// if( empty($bc) ) continue;
 
 			$stmt->bind_param('s',$bc);
 			$stmt->execute();
@@ -542,6 +561,67 @@ ROW;
 		echo '<pre style="font-size:9px;background:hsl(0,0%,94%);padding:1em;">';
 		var_export($value);
 		echo '</pre>';
+	}
+
+	// from Wordpress includes
+	function maybe_unserialize( $original ) {
+		if ( $this->_is_serialized( $original ) ) // don't attempt to unserialize data that wasn't serialized going in
+			return $this->_unserialize( $original );
+		return $original;
+	}
+	private function _is_serialized($data,$strict=true){
+		// if it isn't a string, it isn't serialized.
+		if ( ! is_string( $data ) ) {
+			return false;
+		}
+		$data = trim( $data );
+	 	if ( 'N;' == $data ) {
+			return true;
+		}
+		if ( strlen( $data ) < 4 ) {
+			return false;
+		}
+		if ( ':' !== $data[1] ) {
+			return false;
+		}
+		if ( $strict ) {
+			$lastc = substr( $data, -1 );
+			if ( ';' !== $lastc && '}' !== $lastc ) {
+				return false;
+			}
+		} else {
+			$semicolon = strpos( $data, ';' );
+			$brace     = strpos( $data, '}' );
+			// Either ; or } must exist.
+			if ( false === $semicolon && false === $brace )
+				return false;
+			// But neither must be in the first X characters.
+			if ( false !== $semicolon && $semicolon < 3 )
+				return false;
+			if ( false !== $brace && $brace < 4 )
+				return false;
+		}
+		$token = $data[0];
+		switch ( $token ) {
+			case 's' :
+				if ( $strict ) {
+					if ( '"' !== substr( $data, -2, 1 ) ) {
+						return false;
+					}
+				} elseif ( false === strpos( $data, '"' ) ) {
+					return false;
+				}
+				// or else fall through
+			case 'a' :
+			case 'O' :
+				return (bool) preg_match( "/^{$token}:[0-9]+:/s", $data );
+			case 'b' :
+			case 'i' :
+			case 'd' :
+				$end = $strict ? '$' : '';
+				return (bool) preg_match( "/^{$token}:[0-9.E-]+;$end/", $data );
+		}
+		return false;
 	}
 
 }

@@ -55,6 +55,7 @@ if( isset($_POST['upload-csv'])) {
 	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
 	
 	$Inventory->updateInventory();
+	var_export($Inventory->matchedBlacklist);
 
 	?> 
 	
@@ -87,7 +88,13 @@ if( $lastReportDate = $Inventory->getLastReportDate() ) {
 
 
 if( isset($_POST['save-blacklist']) ){
-	$Inventory->saveBlackListedBarcodes($_POST['blacklist']);
+	$blacklist = [];
+	foreach($_POST['blacklist'] as $key=>$blEntry){
+		if( ! empty($blEntry['barcode']) )
+			$blacklist[] = $blEntry;
+	}
+	echo'<pre>-- $blacklist --<br>';var_export($blacklist);echo'</pre>';
+	$Inventory->saveBlackListedBarcodes($blacklist);
 	echo '<div class="finish-message">Updated Ignored Barcodes</div>';
 }
 
@@ -128,16 +135,37 @@ if( isset($_POST['save-blacklist']) ){
 		<div class="col half">
 			<form method="post"  class="main-actions">
 			<h2>Ignored Barcodes</h2>
-				<p>
-					<label for="blacklist">List barcodes to ignore, one on each line. These will be remembered between uploads.</label>
-					<?php 	
-					$saved_barcodes = $Inventory->getBlackListedBarcodes();
-					$saved_barcodes = implode("\n",$saved_barcodes);
-					 ?>
-					<textarea name="blacklist" style="height:285px;"><?php echo $saved_barcodes ?></textarea>
-				</p>
+				<p>List barcodes to ignore. These will be remembered between uploads.</p>
+				<table class="js-dynamic-rows">
+					<tr>
+						<th>Barcode</th>
+						<th>Reason (optional)</th>
+					</tr>
+					<?php 
+					$saved_barcodes = $Inventory->getBlackListedBarcodes(true);
+					$i=1;
+					foreach($saved_barcodes as $barcodeArrayData){
+						$barcode = htmlspecialchars($barcodeArrayData['barcode']);
+						$reason = htmlspecialchars($barcodeArrayData['reason']);
+
+						echo '<tr data-rownum="'.$i.'">
+							<td><input type="text" name="blacklist['.$i.'][barcode]" value="'.$barcode.'" class="js-dynamic-row">
+							<td><textarea name="blacklist['.$i.'][reason]" class="js-dynamic-row">'.$reason.'</textarea>
+								<a href="#" class="js-delete-dynamic-row">X</a>
+						</tr>';						
+						$i++;
+					}
+					echo '<tr data-rownum="'.$i.'" class="empty">
+							<td><input type="text" name="blacklist['.$i.'][barcode]" value="" class="js-dynamic-row">
+							<td><textarea name="blacklist['.$i.'][reason]" class="js-dynamic-row"></textarea>
+								<a href="#" class="js-delete-dynamic-row">X</a>
+						</tr>';
+					?>
+				</table>
+
 				<p>
 				<input type="submit" value="Save" name="save-blacklist">
+				</p>
 			</form>
 		</div>
 	</div>

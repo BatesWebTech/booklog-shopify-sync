@@ -99,6 +99,10 @@ body {
 	padding: .8em;
 	position: relative;
 
+	td {
+		vertical-align: top;
+	}
+
 	label {
 		display: block;
 		font-weight: 200;
@@ -122,7 +126,7 @@ body {
 	{
 		font-weight: 700;
 	}
-	input[type="text"] {
+	input[type="text"], textarea {
 		padding: .5em;
 		font-size: .9em;
 	}
@@ -131,8 +135,8 @@ body {
 		font-size: .9em;
 	}
 
-	.col textarea {
-		width: 100%;
+	textarea {
+		font-family: inherit;
 	}
 
 }
@@ -201,6 +205,30 @@ body {
 		font-style: italic;
 	}
 
+}
+
+
+.js-delete-dynamic-row {
+	color: red;
+	font-weight: bold;
+	font-size: .8em;
+	font-family: verdana;
+	text-transform: uppercase;
+	text-decoration: none;
+	display: inline-block;
+	background: hsl(0,70%,94%);
+	padding: 3px 6px;
+	border-radius: 2px;
+	border: 1px solid transparent;
+	margin: 0 10px 0 5px;
+}
+.js-delete-dynamic-row:hover {
+	border-color: red;
+	background: hsl(0,80%,88%);
+}
+
+tr.empty .js-delete-dynamic-row {
+	display: none;
 }
 
 .col-wrapper {
