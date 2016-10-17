@@ -41,9 +41,7 @@ if( isset($_POST['download_report']) ) {
 
 <?php
 
-if( isset($_POST['submit'])) {
-
-	$Inventory->saveBlackListedBarcodes($_POST['blacklist']);
+if( isset($_POST['upload-csv'])) {
 
 	if( $_FILES['csv']['tmp_name'] != '' ) {
 
@@ -76,30 +74,34 @@ if( isset($_POST['submit'])) {
 
 	}
 
-} else {
+}
 
-	if( $lastReportDate = $Inventory->getLastReportDate() ) {
-		
-		echo '<form action="" method="POST" class="download-report-form page-top">
-			<input type="hidden" name="download_report" value="1">
-			<p>Last report run: <b>'. date('F j, Y (g:i a)',strtotime($lastReportDate)) .'</b></p>
-			<button id="saveResultsReport">Download it</button>
-		</form>
-		';
+if( $lastReportDate = $Inventory->getLastReportDate() ) {
+	echo '<form action="" method="POST" class="download-report-form page-top">
+		<input type="hidden" name="download_report" value="1">
+		<p>Last report run: <b>'. date('F j, Y (g:i a)',strtotime($lastReportDate)) .'</b></p>
+		<button id="saveResultsReport">Download it</button>
+	</form>
+	';
+}
 
-	}
 
-} // end posted
+if( isset($_POST['save-blacklist']) ){
+	$Inventory->saveBlackListedBarcodes($_POST['blacklist']);
+	echo '<div class="finish-message">Updated Ignored Barcodes</div>';
+}
+
+
+
 
 ?>
 
 
-<form method="post" action="" enctype="multipart/form-data" class="upload-csv">
-
-	<h2>Update Inventory</h2>
-
 	<div class="col-wrapper">
 		<div class="col half">
+			<form method="post" action="" enctype="multipart/form-data" class="main-actions">
+			<h2>Update Inventory</h2>
+
 			<p>
 				<label for="csv_header_inventory">Column header for quantity</label>	
 				<input type="text" id="csv_header_inventory" value="in_qty_onhand" name="csv_header_inventory" />
@@ -117,23 +119,29 @@ if( isset($_POST['submit'])) {
 				<label for="csv">Upload a CSV</label>
 				<input type="file" name="csv" id="csv">
 			</p>
+			<p>
+				<input type="submit" value="Run Update" name="upload-csv">
+			</p>
+			</form>
 		</div>
 
 		<div class="col half">
-			<p>
-				<label for="blacklist">List barcodes to ignore, one on each line. These will be remembered between uploads.</label>
-				<?php 	
-				$saved_barcodes = $Inventory->getBlackListedBarcodes();
-				$saved_barcodes = implode("\n",$saved_barcodes);
-				 ?>
-				<textarea name="blacklist" style="height:285px;"><?php echo $saved_barcodes ?></textarea>
-			</p>
+			<form method="post"  class="main-actions">
+			<h2>Ignored Barcodes</h2>
+				<p>
+					<label for="blacklist">List barcodes to ignore, one on each line. These will be remembered between uploads.</label>
+					<?php 	
+					$saved_barcodes = $Inventory->getBlackListedBarcodes();
+					$saved_barcodes = implode("\n",$saved_barcodes);
+					 ?>
+					<textarea name="blacklist" style="height:285px;"><?php echo $saved_barcodes ?></textarea>
+				</p>
+				<p>
+				<input type="submit" value="Save" name="save-blacklist">
+			</form>
 		</div>
 	</div>
 	
-	<p>
-		<input type="submit" value="Run Update" name="submit">
-	</p>
 
 </form>
 
