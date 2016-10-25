@@ -354,14 +354,15 @@ ROW;
 	}
 
 	function saveBlackListedBarcodes($barcodes) {
-		if( empty($barcodes) )
-			return false;
+
 		global $s;
 		$db = $s->getDB();
-		// $barcodes = explode("\n",$barcodes);
 
 		// remove previously saved barcodes
 		$db->query("DELETE FROM barcodes WHERE store='{$s->shop_domain}' AND action='blacklist'");
+
+		if( is_null($barcodes) )
+			return;
 
 		$stmt = $db->prepare("INSERT INTO barcodes (store,barcode,action) VALUES ('{$s->shop_domain}',?,'blacklist');");
 
@@ -369,8 +370,6 @@ ROW;
 			if( is_array($bc) && empty($bc['barcode']) ) continue;
 
 			$bc = $this->_serialize($bc);
-			// $bc = trim($bc);
-			// if( empty($bc) ) continue;
 
 			$stmt->bind_param('s',$bc);
 			$stmt->execute();

@@ -85,13 +85,21 @@ if( $lastReportDate = $Inventory->getLastReportDate() ) {
 	';
 }
 
-
 if( isset($_POST['save-blacklist']) ){
 	$blacklist = array();
-	foreach($_POST['blacklist'] as $key=>$blEntry){
-		if( ! empty($blEntry['barcode']) )
-			$blacklist[] = $blEntry;
+
+	// emptying out the list
+	if( count($_POST['blacklist']) == 1 && current($_POST['blacklist'])['barcode']=='' ) {
+		$blacklist = null;
+	} else {
+
+		foreach($_POST['blacklist'] as $key=>$blEntry){
+			if( ! empty($blEntry['barcode']) )
+				$blacklist[] = $blEntry;
+		}
+
 	}
+
 	$Inventory->saveBlackListedBarcodes($blacklist);
 	echo '<div class="finish-message">Updated Ignored Barcodes</div>';
 }
