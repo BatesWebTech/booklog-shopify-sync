@@ -89,7 +89,8 @@ if( isset($_POST['save-blacklist']) ){
 	$blacklist = array();
 
 	// emptying out the list
-	if( count($_POST['blacklist']) == 1 && current($_POST['blacklist'])['barcode']=='' ) {
+	$firstBlacklistItem = current($_POST['blacklist']);
+	if( count($_POST['blacklist']) == 1 && $firstBlacklistItem['barcode']=='' ) {
 		$blacklist = null;
 	} else {
 
