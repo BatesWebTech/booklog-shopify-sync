@@ -112,7 +112,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 	function getProductCount() {
 		$resp = $this->call('GET','admin/products/count.json');
 		// $resp = json_decode($resp);
-		return $resp['count'];
+		return $resp;
 	}
 
 	function getProducts($fields=array()){
@@ -129,8 +129,8 @@ class ShopifyClientWrapper extends ShopifyClient {
 
 	function getAllProducts($fields=array()){
 		$allProducts = array();
-		$limit = '50';
-		$totalProducts = 400;//$this->getProductCount();
+		$limit = 50;
+		$totalProducts = $this->getProductCount();
 		$pageCount = ceil( $totalProducts / $limit );
 
 		for( $pageNum=1; $pageNum<=$pageCount; $pageNum++ ) {
