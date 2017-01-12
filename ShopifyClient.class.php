@@ -1,4 +1,8 @@
 <?php
+/** 
+ * This code has been adapted from 
+ * https://github.com/cmcdonaldca/ohShopify.php
+ */
 class ShopifyClient {
 	public $shop_domain;
 	private $token;

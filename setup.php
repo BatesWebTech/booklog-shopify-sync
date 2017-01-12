@@ -1,5 +1,9 @@
 <?php
 
+/** 
+ * This code has been adapted from 
+ * https://github.com/cmcdonaldca/ohShopify.php
+ */
 
 /* Define requested scope (access rights) - checkout https://docs.shopify.com/api/authentication/oauth#scopes   */
 define('SHOPIFY_SCOPE','read_products,write_products');

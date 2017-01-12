@@ -562,12 +562,19 @@ ROW;
 		echo '</pre>';
 	}
 
-	// from Wordpress includes
+	/**
+	 * This function is from Wordpress.org project
+	 * ./wp-includes/functions.php
+	 */
 	function maybe_unserialize( $original ) {
 		if ( $this->_is_serialized( $original ) ) // don't attempt to unserialize data that wasn't serialized going in
 			return $this->_unserialize( $original );
 		return $original;
 	}
+	/**
+	 * This function is from Wordpress.org project
+	 * ./wp-includes/functions.php
+	 */
 	private function _is_serialized($data,$strict=true){
 		// if it isn't a string, it isn't serialized.
 		if ( ! is_string( $data ) ) {
