@@ -133,6 +133,27 @@ ROW;
 	}
 
 	function printUpdateReport(){
+
+		if( count( $this->errored ) ) {
+			echo '<table class="results-table error-table">
+				<tr class="heading-row">
+					<td colspan="3"><h3>'.count($this->errored).' Errors Occured</h3></td>
+				</tr>
+				<tr>
+					<th><i>Title</i></th>
+					<th><i>Barcode</i></th>
+					<th><i>Error</i></th>
+				</tr>';
+			foreach($this->errored as $variant) {
+				echo "<tr>
+					<td>{$variant['title']}</td>
+					<td>{$variant['barcode']}</td>
+					<td>{$variant['error']}</td>
+				</tr>";
+			}
+			echo '</table>';
+		}
+
 		echo '<table class="results-table">
 		<tr>
 			<th>Title</th>
@@ -205,23 +226,6 @@ ROW;
 
 		echo '</table>';
 
-		if( count( $this->errored ) ) {
-			echo '<h3>'.count($this->errored).' Errors Occured</h3>
-				<table>
-				<tr>
-					<th>Title</th>
-					<th>Barcode</th>
-					<th>Error</th>
-				</tr>';
-			foreach($this->errored as $variant) {
-				echo "<tr>
-					<td>{$variant['title']}</td>
-					<td>{$variant['barcode']}</td>
-					<td>{$variant['error']}</td>
-				</tr>";
-			}
-			echo '</table>';
-		}
 	}
 
 	function updateInventory() {
@@ -543,10 +547,24 @@ ROW;
 			$inventoryCount = $row[$inventoryHeader];
 			$title = $row[$titleHeader];
 
-			$toUpdate[ $barcode ] = array(
+			$values = array(
 				'inventory_quantity' => $inventoryCount,
 				'title' => $title
 			);
+
+			if( array_key_exists($barcode, $toUpdate) ) {
+
+				$this->errored[] = array(
+					'title' => $title,
+					'barcode' => $barcode,
+					'error' => "Duplicate barcode found. This quantity ({$inventoryCount}) was not used, previous barcode's quantity ({$toUpdate[$barcode]['inventory_quantity']}) was used instead."
+				);
+				$this->countErrored(1);
+			
+			} else {
+				$toUpdate[ $barcode ] = $values;
+			}
+
 		}
 
 		$this->setQuantityUpdates( $toUpdate );

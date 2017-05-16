@@ -93,7 +93,12 @@ body {
 	border: 1px solid hsl(100,50%,70%);
 	background: hsl(0,0%,100%);
 }
-
+.problem-message {
+	padding: 1.1em;
+	margin: 1em;
+	border: 1px solid hsl(0,100%,40%);
+	background: hsl(0,80%,95%);
+}
 .main-actions {
 	margin: 1.1em;
 	padding: .8em;
@@ -205,6 +210,18 @@ body {
 		font-style: italic;
 	}
 
+}
+.error-table {
+	background: hsl(0,80%,80%);
+	border: 1px solid red;
+	tr:nth-child(2n+1) td {
+		background: hsl(0,97%,97%);
+	}
+
+	tr.heading-row td {
+		background: hsl(0,90%,20%);
+		color: hsl(0,0%,95%);
+	}
 }
 
 
