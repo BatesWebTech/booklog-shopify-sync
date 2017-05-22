@@ -7,6 +7,7 @@ class ShopifyInventory {
 	var $notChanged = array();
 	var $changed = array();
 	var $errored = array();
+	var $matchedBarcodes = array();
 	var $notMatched = array();
 	var $notMatchedFromShopify = array();
 	var $matchedBlacklist = array();
@@ -265,6 +266,7 @@ ROW;
 						)
 					);
 
+					$this->matchedBarcodes[] = $variant['barcode'];
 					// remove this one from the quantityUpdates array b/c we've dealt with it
 					// also, then later we'll know which haven't been matched
 					unset($this->quantityUpdates[ $variant['barcode'] ]);
@@ -304,8 +306,17 @@ ROW;
 						$this->doBatchVariantUpdates();
 
 				} else {
-					// the shopify barcode is not in the uploaded file
-					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
+
+					if( in_array($variant['barcode'], $this->matchedBarcodes) ){
+						// two Shopify products have the same barcode
+						$this->errored[] = array(
+							'title' => '', 
+							'barcode' => $variant['barcode'],
+							'error' => "Duplicate barcode - there is more than one product/variant in Shopify inventory with this barcode. This will cause inconsistencies in the inventory sync process."
+						);
+						$this->countErrored(1);
+					} else // the shopify barcode is not in the uploaded file
+						$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
 				}
 			}
 		}
@@ -557,7 +568,7 @@ ROW;
 				$this->errored[] = array(
 					'title' => $title,
 					'barcode' => $barcode,
-					'error' => "Duplicate barcode found. This quantity ({$inventoryCount}) was not used, previous barcode's quantity ({$toUpdate[$barcode]['inventory_quantity']}) was used instead."
+					'error' => "Duplicate barcode found in uploaded csv. This quantity ({$inventoryCount}) was not used, previous barcode's quantity ({$toUpdate[$barcode]['inventory_quantity']}) was used instead."
 				);
 				$this->countErrored(1);
 			
