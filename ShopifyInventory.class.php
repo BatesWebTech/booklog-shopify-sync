@@ -468,6 +468,12 @@ ROW;
 		return $report;
 	}
 
+	private function _stringifyArray($mixed){
+		if( is_array($mixed) )
+			return implode(' ',$mixed);
+		return $mixed;
+	}
+
 	function downloadReport() {
 		if( headers_sent() )
 			die( 'Cannot download CSV, function called too late');
@@ -478,12 +484,6 @@ ROW;
 
 		header ('Content-Type: text/csv; charset=UTF-8');
 		header ('Content-Disposition: attachment; filename="inventory-update-report_'.date('Y-m-d-H-i-s').'.csv"');
-
-		$notes = function($mixed){
-			if( is_array($mixed) )
-				return implode(' ',$mixed);
-			return $mixed;
-		};
 
 		$csv = fopen('php://output', 'w');
 
@@ -505,7 +505,7 @@ ROW;
 				'',
 				'',
 				'errored',
-				$notes( $err['error'] )
+				$this->_stringifyArray( $err['error'] )
 			));
 		}
 
@@ -516,7 +516,7 @@ ROW;
 				$ch['oldQuantity'],
 				$ch['newQuantity'],
 				'changed',
-				$notes( $ch['note'] )
+				$this->_stringifyArray( $ch['note'] )
 			));
 		}
 
@@ -527,7 +527,7 @@ ROW;
 				$nc['newData']['inventory_quantity'],
 				$nc['newData']['old_inventory_quantity'],
 				'not changed',
-				$notes( $nc['note'] )
+				$this->_stringifyArray( $nc['note'] )
 			));
 		}
 
@@ -538,7 +538,7 @@ ROW;
 				'',
 				'',
 				'not matched (product from uploaded csv)',
-				$notes( $nm['note'] )
+				$this->_stringifyArray( $nm['note'] )
 			));
 		}
 
@@ -549,7 +549,7 @@ ROW;
 				'',
 				'',
 				'not matched (product in Shopify)',
-				$notes( $nms['note'] )
+				$this->_stringifyArray( $nms['note'] )
 			));
 		}
 
