@@ -48,7 +48,7 @@ class ShopifyInventory {
 			echo $msg;
 			return false;
 		}
-		$this->notMatched = $this->quantityUpdates;
+		// $this->notMatched = $this->quantityUpdates;
 		return ($this->countCsvRows() - $this->countMatched() );
 	}
 	function countCsvRows($num=false) {
@@ -72,7 +72,8 @@ class ShopifyInventory {
 			'title' => '',
 			'barcode' => '',
 			'oldQuantity' => '',
-			'newQuantity' => ''
+			'newQuantity' => '',
+			'note' => ''
 		),$custom);
 
 		$updatedRowClass = '';
@@ -82,16 +83,22 @@ class ShopifyInventory {
 			$updatedRowClass = ' incremented ';
 		elseif( $td['oldQuantity'] > $td['newQuantity'] )
 			$updatedRowClass = ' decremented ';
-		elseif( $td['oldQuantity'] == 'untracked by Shopify' || $td['oldQuantity'] == 'blacklisted barcode' ) {
+		elseif( is_null($td['oldQuantity']) || is_null($td['oldQuantity']) ) {
 			$updatedRowClass = $oldRowClass = ' untracked ';
 		}
 
+		if( is_array($td['note']) )
+			$notes = implode(' ',$td['note']);
+		else
+			$notes = $td['note'];
 		return <<<ROW
 		<tr class="{$classes}">
 			<td class="result-set-title">{$td['title']}</td>
 			<td class="result-set-barcode">{$td['barcode']}</td>
 			<td class="result-set-old display-numeric {$oldRowClass}">{$td['oldQuantity']}</td>
 			<td class="result-set-updated display-numeric {$updatedRowClass}">{$td['newQuantity']}</td>
+			<td class="result-set-note">{$notes}</td>
+		</tr>
 ROW;
 	}
 
@@ -115,7 +122,8 @@ ROW;
 						'title' => $oldData['title'],
 						'barcode' => $oldData['barcode'],
 						'newQuantity' => $res['inventory_quantity'],
-						'oldQuantity' => $newData['old_inventory_quantity']
+						'oldQuantity' => $newData['old_inventory_quantity'],
+						'note' => $data['note']
 					);
 
 				}
@@ -161,26 +169,28 @@ ROW;
 			<th>Barcode</th>
 			<th>Old Inventory</th>
 			<th>Updated Inventory</th>
+			<th>Note</th>
 		</tr>';
 
 
 		if( count( $this->changed ) ) {
 			echo '<tr class="heading-row">
-				<td colspan="4" ><h3>Updated</h3></td>
+				<td colspan="5" ><h3>Updated</h3></td>
 			</tr>';
 			foreach($this->changed as $variant) {
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $variant['barcode'],
 					'oldQuantity' => $variant['oldQuantity'],
-					'newQuantity' => $variant['newQuantity']
+					'newQuantity' => $variant['newQuantity'],
+					'note' => $variant['note']
 				), 'updated');
 			}
 		}
 
 		if( count( $this->notChanged ) ) {
 			echo '<tr class="heading-row">
-				<td colspan="4"><h3>Matched, no update needed</h3></td>
+				<td colspan="5"><h3>Matched, no update needed</h3></td>
 			</tr>';
 
 			foreach($this->notChanged as $variant) {
@@ -188,7 +198,8 @@ ROW;
 					'title' => $variant['oldData']['title'],
 					'barcode' => $variant['oldData']['barcode'],
 					'oldQuantity' => $variant['newData']['old_inventory_quantity'],
-					'newQuantity' => $variant['newData']['inventory_quantity']
+					'newQuantity' => $variant['newData']['inventory_quantity'],
+					'note' => $variant['note']
 				), 'not-changed');
 			}
 		}
@@ -196,7 +207,7 @@ ROW;
 
 		if( count( $this->notMatched ) ) {
 			echo '<tr class="heading-row">
-				<td colspan="4"><h3>Unmatched barcodes</h3></td>
+				<td colspan="5"><h3>Unmatched barcodes</h3></td>
 			</tr>';
 
 			foreach($this->notMatched as $barcode => $variant) {
@@ -204,14 +215,15 @@ ROW;
 					'title' => $variant['title'],
 					'barcode' => $barcode,
 					'oldQuantity' => '',
-					'newQuantity' => ''
+					'newQuantity' => '',
+					'note' => $variant['note']
 				),'not-matched');
 			}
 		}
 
 		if( count( $this->notMatchedFromShopify ) ) {
 			echo '<tr class="heading-row">
-				<td colspan="4"><h3>Products in Shopify that weren\'t matched in the upload</h3></td>
+				<td colspan="5"><h3>Products in Shopify that weren\'t matched in the upload</h3></td>
 			</tr>';
 
 			foreach($this->notMatchedFromShopify as $barcode => $variant) {
@@ -219,7 +231,8 @@ ROW;
 					'title' => $variant['title'],
 					'barcode' => $barcode,
 					'oldQuantity' => '',
-					'newQuantity' => ''
+					'newQuantity' => '',
+					'note' => $variant['note']
 				),'not-matched');
 			}
 		}
@@ -247,9 +260,8 @@ ROW;
 					if( is_null($this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity']) )
 						$this->debug($this->quantityUpdates[ $variant['barcode'] ],'This barcode had strangeness');
 
-					$this->countMatched(1);
 
-					$title = $this->quantityUpdates[ $variant['barcode'] ]['title'];
+					$title = $this->quantityUpdates[ $variant['barcode'] ]['title'] . " ({$variant['title']})";
 					$quantity = $this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity'];
 					$oldQuantity = $variant['inventory_quantity'];
 
@@ -266,16 +278,33 @@ ROW;
 						)
 					);
 
-					$this->matchedBarcodes[] = $variant['barcode'];
-					// remove this one from the quantityUpdates array b/c we've dealt with it
-					// also, then later we'll know which haven't been matched
-					unset($this->quantityUpdates[ $variant['barcode'] ]);
+
+					
+					// if two Shopify products share a barcode, make a note of it.
+					if( in_array($variant['barcode'], $this->matchedBarcodes) ){
+
+						$variantCustomData['note'][] = "This barcode has a duplicate in the Shopify stock. Both product variants with this barcode will be updated as necessary.";
+					
+					} else {
+						$this->matchedBarcodes[] = $variant['barcode'];
+						// remove this one from the quantityUpdates array b/c we've dealt with it
+						// also, then later we'll know which haven't been matched
+						/**
+						 * 2015-05 commented this so that if Shopify stock has dupe barcodes, 
+						 *         they both get updated to the spreadsheet value.
+						 */
+						// unset($this->quantityUpdates[ $variant['barcode'] ]);
+					}
+					$this->countMatched(1);
+
 
 					if(in_array($variant['barcode'], $this->getBlackListedBarcodes())) {
 						// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist');
 						$variantCustomData['newData']['inventory_quantity']
 							= $variantCustomData['newData']['old_inventory_quantity']
-							= 'blacklisted barcode';
+							// = 'blacklisted barcode';
+							= null;
+						$variantCustomData['note'][] = 'Blacklisted barcode.';
 
 						$this->notChanged[ $idAsString ] 
 							= $this->matchedBlacklist[]
@@ -286,8 +315,11 @@ ROW;
 					// if Shopify is set not to track inventory, skip this one
 					if( $variant['inventory_management'] != 'shopify' ) {
 						// $this->debug($variant['barcode'],'Barcode skipped cuz shopify is not tracking its inventory');
-						$variantCustomData['newData']['inventory_quantity'] = 'untracked by Shopify';
-						$variantCustomData['newData']['old_inventory_quantity'] = 'untracked by Shopify';
+						$variantCustomData['newData']['inventory_quantity'] 
+							= $variantCustomData['newData']['old_inventory_quantity'] 
+							// = 'untracked by Shopify';
+							= null;
+						$variantCustomData['note'][] = 'Untracked by Shopify.';
 						$this->notChanged[ $idAsString ] = $variantCustomData;
 						continue;
 					}
@@ -306,17 +338,8 @@ ROW;
 						$this->doBatchVariantUpdates();
 
 				} else {
-
-					if( in_array($variant['barcode'], $this->matchedBarcodes) ){
-						// two Shopify products have the same barcode
-						$this->errored[] = array(
-							'title' => '', 
-							'barcode' => $variant['barcode'],
-							'error' => "Duplicate barcode - there is more than one product/variant in Shopify inventory with this barcode. This will cause inconsistencies in the inventory sync process."
-						);
-						$this->countErrored(1);
-					} else // the shopify barcode is not in the uploaded file
-						$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
+					// the shopify barcode is not in the uploaded file
+					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
 				}
 			}
 		}
@@ -456,6 +479,11 @@ ROW;
 		header ('Content-Type: text/csv; charset=UTF-8');
 		header ('Content-Disposition: attachment; filename="inventory-update-report_'.date('Y-m-d-H-i-s').'.csv"');
 
+		$notes = function($mixed){
+			if( is_array($mixed) )
+				return implode(' ',$mixed);
+			return $mixed;
+		};
 
 		$csv = fopen('php://output', 'w');
 
@@ -464,7 +492,8 @@ ROW;
 			'Barcode',
 			'Old Inventory',
 			'Updated Inventory',
-			'Status'
+			'Status',
+			'Notes'
 		);
 
 		fputcsv($csv, $headers);
@@ -475,7 +504,8 @@ ROW;
 				$err['barcode'],
 				'',
 				'',
-				$err['error']
+				'errored',
+				$notes( $err['error'] )
 			));
 		}
 
@@ -485,7 +515,8 @@ ROW;
 				$ch['barcode'],
 				$ch['oldQuantity'],
 				$ch['newQuantity'],
-				'changed'
+				'changed',
+				$notes( $ch['note'] )
 			));
 		}
 
@@ -495,7 +526,8 @@ ROW;
 				$nc['oldData']['barcode'],
 				$nc['newData']['inventory_quantity'],
 				$nc['newData']['old_inventory_quantity'],
-				'not changed'
+				'not changed',
+				$notes( $nc['note'] )
 			));
 		}
 
@@ -505,7 +537,8 @@ ROW;
 				$nm['barcode'],
 				'',
 				'',
-				'not matched (product from uploaded csv)'
+				'not matched (product from uploaded csv)',
+				$notes( $nm['note'] )
 			));
 		}
 
@@ -515,7 +548,8 @@ ROW;
 				$nms['barcode'],
 				'',
 				'',
-				'not matched (product in Shopify)'
+				'not matched (product in Shopify)',
+				$notes( $nms['note'] )
 			));
 		}
 
