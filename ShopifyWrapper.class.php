@@ -46,7 +46,11 @@ class ShopifyClientWrapper extends ShopifyClient {
 
 
 	function getProductCount() {
-		$resp = $this->call('GET','admin/products/count.json');
+		try {
+			$resp = $this->call('GET','admin/products/count.json');
+		} catch (ShopifyApiException $e) {
+			die("Error: " . $e->getMessage() );
+		}
 		// $resp = json_decode($resp);
 		return $resp;
 	}
