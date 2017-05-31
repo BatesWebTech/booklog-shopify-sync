@@ -3,7 +3,7 @@ ShopifyApp.ready(function(){
 });
 
 jQuery(function($){
-	$('form.upload-csv').on('submit',function(e){
+	$('form.main-actions').on('submit',function(e){
 		// e.preventDefault();
 		$(this).addClass('loading');
 

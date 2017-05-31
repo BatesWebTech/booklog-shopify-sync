@@ -24,7 +24,7 @@ if( isset($_POST['download_report']) ) {
 <html>
 <head>
 	<title>Bates Inventory Updater</title>
-	<link rel="stylesheet" href="style.css?v6" type="text/css">
+	<link rel="stylesheet" href="style.css?v7" type="text/css">
 	<script src="https://cdn.shopify.com/s/assets/external/app.js"></script>
 	<script type="text/javascript">
 	var shop = 'https://<?php echo STORE_NAME ?>';
@@ -35,7 +35,7 @@ if( isset($_POST['download_report']) ) {
     });
   </script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
-	<script src="script.js?v3"></script>
+	<script src="script.js?v7"></script>
 </head>
 <body>
 
