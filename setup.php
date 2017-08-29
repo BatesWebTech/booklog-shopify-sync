@@ -24,7 +24,7 @@ if (isset($_GET['code'])) { // if the code param has been sent to this page... w
 }
 // if they posted the form with the shop name
 // else if (isset($_POST['shop'])) {
-else if ( strpos($headers['Referer'], 'https://apps.shopify.com') === 0) {
+else if ( array_key_exists('Referer', $headers) && (strpos($headers['Referer'], 'https://apps.shopify.com') === 0)) {
 
     // Step 1: get the shopname from the user and redirect the user to the
     // shopify authorization page where they can choose to authorize this app
