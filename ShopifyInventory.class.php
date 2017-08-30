@@ -111,16 +111,11 @@ ROW;
 		foreach($this->updatesToRun as $vid => $data){
 			$newData = $data['newData'];
 			$oldData = $data['oldData'];
-		  	$got_a_429 = false;
-	
-			do {
-			  try {
+			try {
+				try_to_update :
 				$res = $s->updateVariant($vid,$newData);
 				// $this->debug(array('id'=>$vid,'data'=>$newData),'Called updateVariant() with these params');
 				// $this->debug($res,'- - got these results');
-
-			  	// if we make it past the update, we dont' have a 429 this time around
-			  	$got_a_429 = false;
 				if( ! array_key_exists('errors', $res) ) {
 
 					// the "old_inventory_quantity" in the result set is not actually the old inventory. 
@@ -146,7 +141,7 @@ ROW;
 				if( $this->fourTwentyNines < 0 )
 					$this->fourTwentyNines = 0;
 
-			  } catch (ShopifyApiException $e) {
+			} catch (ShopifyApiException $e) {
 
 				$headers = $e->getResponseHeaders();
 
@@ -159,23 +154,19 @@ ROW;
 
 					usleep($waitTime);
 
-					// error_log("429: Wait for {$waitTime} milliseconds...");	
-					// cause the do...while loop to kick in			
-					$got_a_429 = true;
-
-				} else {
-
-					$err = $e->getResponse();
-					$this->errored[] = array(
-						'title' => $oldData['title'],
-						'barcode' => $oldData['barcode'],
-						'error' => var_export($err['errors'],1)
-					);
-					// echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
-					$this->countErrored(1);
+					// error_log("429: Wait for {$waitTime} milliseconds...");					
+					goto try_to_update;
 				}
-			  }
-			} while ($got_a_429);
+
+				$err = $e->getResponse();
+				$this->errored[] = array(
+					'title' => $oldData['title'],
+					'barcode' => $oldData['barcode'],
+					'error' => var_export($err['errors'],1)
+				);
+				// echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
+				$this->countErrored(1);
+			}
 		}
 		// make sure proxy is receiving stuff sometimes to avoid timeouts
 		echo ' ';
