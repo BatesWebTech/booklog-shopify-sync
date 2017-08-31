@@ -15,6 +15,10 @@ class ShopifyInventory {
 	var $blacklistedBarcodes = false;
 	var $debugging = false;
 
+	// how many items to queue before sending the updates to Shopify
+	private $sizeOfBatchUpdates = 1; // 20
+	private $fourTwentyNines = 0;
+
 	var $counts = array(
 		'matched' => 0,
 		'errored' => 0,
@@ -105,10 +109,10 @@ ROW;
 	function doBatchVariantUpdates(){
 		global $s;
 		foreach($this->updatesToRun as $vid => $data){
-			usleep(500000); // rate limit to .5 seconds so we dont' hit our api limit
 			$newData = $data['newData'];
 			$oldData = $data['oldData'];
 			try {
+				try_to_update :
 				$res = $s->updateVariant($vid,$newData);
 				// $this->debug(array('id'=>$vid,'data'=>$newData),'Called updateVariant() with these params');
 				// $this->debug($res,'- - got these results');
@@ -118,6 +122,11 @@ ROW;
 					// That value is more for values that might get changed during the transmission of
 					// the updated data. So we use the value that we saved earlier for the output below
 					$this->countUpdated(1);
+
+					// stop undefined index warnings
+					if( ! array_key_exists('note', $data) )
+						$data['note'] = '';
+
 					$this->changed[] = array(
 						'title' => $oldData['title'],
 						'barcode' => $oldData['barcode'],
@@ -127,7 +136,28 @@ ROW;
 					);
 
 				}
+				if( $this->fourTwentyNines > 0 )
+					$this->fourTwentyNines = $this->fourTwentyNines - 1;
+				if( $this->fourTwentyNines < 0 )
+					$this->fourTwentyNines = 0;
+
 			} catch (ShopifyApiException $e) {
+
+				$headers = $e->getResponseHeaders();
+
+				// if we get a 429 (too many requests), wait and try again
+				// @see https://help.shopify.com/api/getting-started/api-call-limit
+				if( $headers['http_status_code']  == '429' ) {
+
+					$waitTime = 1000000 * ($this->fourTwentyNines + 1.5);
+					$this->fourTwentyNines = $this->fourTwentyNines + 1;
+
+					usleep($waitTime);
+
+					// error_log("429: Wait for {$waitTime} milliseconds...");					
+					goto try_to_update;
+				}
+
 				$err = $e->getResponse();
 				$this->errored[] = array(
 					'title' => $oldData['title'],
@@ -138,6 +168,9 @@ ROW;
 				$this->countErrored(1);
 			}
 		}
+		// make sure proxy is receiving stuff sometimes to avoid timeouts
+		echo ' ';
+		flush();
 		$this->updatesToRun = array();
 	}
 
@@ -178,6 +211,8 @@ ROW;
 				<td colspan="5" ><h3>Updated</h3></td>
 			</tr>';
 			foreach($this->changed as $variant) {
+				if( ! array_key_exists('note',$variant) )
+					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $variant['barcode'],
@@ -194,6 +229,8 @@ ROW;
 			</tr>';
 
 			foreach($this->notChanged as $variant) {
+				if( ! array_key_exists('note',$variant) )
+					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['oldData']['title'],
 					'barcode' => $variant['oldData']['barcode'],
@@ -211,6 +248,8 @@ ROW;
 			</tr>';
 
 			foreach($this->notMatched as $barcode => $variant) {
+				if( ! array_key_exists('note',$variant) )
+					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $barcode,
@@ -227,6 +266,8 @@ ROW;
 			</tr>';
 
 			foreach($this->notMatchedFromShopify as $barcode => $variant) {
+				if( ! array_key_exists('note',$variant) )
+					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $barcode,
@@ -333,8 +374,8 @@ ROW;
 					// must cast as a string, otherwise the array falls over
 					$this->updatesToRun[ $idAsString ] = $variantCustomData;
 					
-					// run the batch 20 at a time. 
-					if( count($this->updatesToRun) > 20 )
+					// run the batch if we've maxed our queue. 
+					if( count($this->updatesToRun) >= $this->sizeOfBatchUpdates )
 						$this->doBatchVariantUpdates();
 
 				} else {
