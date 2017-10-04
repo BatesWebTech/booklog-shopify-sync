@@ -174,6 +174,27 @@ if( isset($_POST['save-blacklist']) ){
 				<input type="submit" value="Save" name="save-blacklist">
 				</p>
 			</form>
+
+			<h3>Products which are ignored because of the <i><?= $Inventory->getTagToBlockInventorySync() ?></i> tag</h3>
+			<ol>
+			<?php
+
+				$products = $s->getAllProducts(array('fields'=>'id,title,tags'));
+				$foundAny = false;
+				foreach($products as $product){
+					if( empty($product["tags"]) ) continue;
+					if( strpos($product["tags"], $Inventory->getTagToBlockInventorySync()) === FALSE) continue;
+
+					echo '<li><a href="https://'.$s->shop_domain.'/admin/products/'.$product['id'].'" target="_blank">'.$product['title'].'</a></li>';
+					$foundAny = true;
+
+				}
+			?>
+			</ol>
+			<?php if( ! $foundAny) {
+				echo '<p>No products found</p>';
+			}
+			?>
 		</div>
 	</div>
 	

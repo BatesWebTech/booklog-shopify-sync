@@ -288,6 +288,17 @@ ROW;
 		$products = $s->getAllProducts();
 
 		foreach($products as $product) {
+			
+			if( empty($product['tags']) )
+				$tags = array();
+			else {
+				$tags = explode(',',$product['tags']);
+				$tags = array_map('trim',$tags);
+			}
+
+
+			/* loop through variants
+			 */
 			foreach($product['variants'] as $variant){
 
 				if( ! $variant['barcode'] ) {
@@ -338,7 +349,7 @@ ROW;
 					}
 					$this->countMatched(1);
 
-
+					// blacklisted because of barcode entry
 					if(in_array($variant['barcode'], $this->getBlackListedBarcodes())) {
 						// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist');
 						$variantCustomData['newData']['inventory_quantity']
@@ -352,6 +363,21 @@ ROW;
 							= $variantCustomData;
 						continue;
 					}
+
+					// blacklisted because of tag
+					if( in_array($this->getTagToBlockInventorySync(), $tags)) {
+						// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist tags');
+						$variantCustomData['newData']['inventory_quantity']
+							= $variantCustomData['newData']['old_inventory_quantity']
+							= null;
+						$variantCustomData['note'][] = 'Blacklisted: this product has ' . $this->getTagToBlockInventorySync() . ' tag';
+
+						$this->notChanged[ $idAsString ] 
+							= $this->matchedBlacklist[]
+							= $variantCustomData;
+						continue;
+					}
+
 
 					// if Shopify is set not to track inventory, skip this one
 					if( $variant['inventory_management'] != 'shopify' ) {
@@ -453,6 +479,11 @@ ROW;
 			$stmt->bind_param('s',$bc);
 			$stmt->execute();
 		}
+	}
+
+	function getTagToBlockInventorySync(){
+		// @FIXME stub
+		return '__donotsyncinventory';
 	}
 
 	function saveResultsReport() {
