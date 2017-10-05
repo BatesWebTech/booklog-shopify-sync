@@ -18,4 +18,4 @@ Since your app will be unlisted, you can't get to it from a search in the App St
 3. Upload the file and submit. A detailed report will be shown on the screen when the process is complete. The report can also be downloaded in the future. Only one report is saved in the app, so each run of the sync process will overwrite the previous report. 
 
 ### Blacklist 
-The admin interface has a section in which you can enter product barcodes which should be ignored during the sync process. 
+The admin interface has a section in which you can enter product barcodes which should be ignored during the sync process. Alternatively, you can use a special tag to indicate a product that should not sync. Currently the tag is `__donotsyncinventory`, but in a future release, this should be configurable.
