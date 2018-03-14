@@ -14,6 +14,7 @@ class ShopifyInventory {
 	var $OKAYTOCOUNTUNMATCHED = false;
 	var $blacklistedBarcodes = false;
 	var $debugging = false;
+	var $location_id = null;
 
 	// how many items to queue before sending the updates to Shopify
 	private $sizeOfBatchUpdates = 1; // 20
@@ -69,6 +70,13 @@ class ShopifyInventory {
 
 	function setQuantityUpdates($vals) {
 		$this->quantityUpdates = $vals;
+	}
+
+	function setLocation( $location_id ){
+		$this->location_id = $location_id;
+	}
+	function getLocation() {
+		return $this->location_id;
 	}
 
 	function printResultRow($custom,$classes='') {
@@ -296,9 +304,8 @@ ROW;
 				$tags = array_map('trim',$tags);
 			}
 
-
-			/* loop through variants
-			 */
+			// get all the inventory items for all this product's variants in one call
+			$inventoryItemIds = array();
 			foreach($product['variants'] as $variant){
 
 				if( ! $variant['barcode'] ) {
@@ -307,107 +314,114 @@ ROW;
 					continue;
 				}
 
-				if( array_key_exists($variant['barcode'],$this->quantityUpdates) ) {
-	
-					if( is_null($this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity']) )
-						$this->debug($this->quantityUpdates[ $variant['barcode'] ],'This barcode had strangeness');
-
-
-					$title = $this->quantityUpdates[ $variant['barcode'] ]['title'] . " ({$variant['title']})";
-					$quantity = $this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity'];
-					$oldQuantity = $variant['inventory_quantity'];
-
-					$idAsString = (string) $variant['id'];
-
-					$variantCustomData = array(
-						'oldData' => array(
-							'title' => $title,
-							'barcode' => $variant['barcode']
-						),
-						'newData' => array(
-							'inventory_quantity' => $quantity,
-							'old_inventory_quantity' => $oldQuantity
-						)
-					);
-
-
-					
-					// if two Shopify products share a barcode, make a note of it.
-					if( in_array($variant['barcode'], $this->matchedBarcodes) ){
-
-						$variantCustomData['note'][] = "This barcode has a duplicate in the Shopify stock. Both product variants with this barcode will be updated as necessary.";
-					
-					} else {
-						$this->matchedBarcodes[] = $variant['barcode'];
-						// remove this one from the quantityUpdates array b/c we've dealt with it
-						// also, then later we'll know which haven't been matched
-						/**
-						 * 2015-05 commented this so that if Shopify stock has dupe barcodes, 
-						 *         they both get updated to the spreadsheet value.
-						 */
-						// unset($this->quantityUpdates[ $variant['barcode'] ]);
-					}
-					$this->countMatched(1);
-
-					// blacklisted because of barcode entry
-					if(in_array($variant['barcode'], $this->getBlackListedBarcodes())) {
-						// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist');
-						$variantCustomData['newData']['inventory_quantity']
-							= $variantCustomData['newData']['old_inventory_quantity']
-							// = 'blacklisted barcode';
-							= null;
-						$variantCustomData['note'][] = 'Blacklisted barcode.';
-
-						$this->notChanged[ $idAsString ] 
-							= $this->matchedBlacklist[]
-							= $variantCustomData;
-						continue;
-					}
-
-					// blacklisted because of tag
-					if( in_array($this->getTagToBlockInventorySync(), $tags)) {
-						// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist tags');
-						$variantCustomData['newData']['inventory_quantity']
-							= $variantCustomData['newData']['old_inventory_quantity']
-							= null;
-						$variantCustomData['note'][] = 'Blacklisted: this product has ' . $this->getTagToBlockInventorySync() . ' tag';
-
-						$this->notChanged[ $idAsString ] 
-							= $this->matchedBlacklist[]
-							= $variantCustomData;
-						continue;
-					}
-
-
-					// if Shopify is set not to track inventory, skip this one
-					if( $variant['inventory_management'] != 'shopify' ) {
-						// $this->debug($variant['barcode'],'Barcode skipped cuz shopify is not tracking its inventory');
-						$variantCustomData['newData']['inventory_quantity'] 
-							= $variantCustomData['newData']['old_inventory_quantity'] 
-							// = 'untracked by Shopify';
-							= null;
-						$variantCustomData['note'][] = 'Untracked by Shopify.';
-						$this->notChanged[ $idAsString ] = $variantCustomData;
-						continue;
-					}
-
-					// only need to update if the quantity is different.
-					if( $quantity == $oldQuantity) {
-						$this->notChanged[ $idAsString ] = $variantCustomData;
-						continue;
-					}
-
-					// must cast as a string, otherwise the array falls over
-					$this->updatesToRun[ $idAsString ] = $variantCustomData;
-					
-					// run the batch if we've maxed our queue. 
-					if( count($this->updatesToRun) >= $this->sizeOfBatchUpdates )
-						$this->doBatchVariantUpdates();
-
-				} else {
+				if( ! array_key_exists($variant['barcode'],$this->quantityUpdates) ) {
 					// the shopify barcode is not in the uploaded file
 					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
+					continue;
 				}
+
+				$inventoryItemIds[] = $variant['inventory_item_id'];
+			}
+			$inventoryItems = $s->getInventoryItems( $inventoryItemIds, $this->getLocation() );
+			
+			//modify the array so can access inventory items by their id
+			foreach($inventoryItems as $integer_key=>$i_item){
+				$inventoryItems[$i_item['inventory_item_id']] = $i_item;
+				unset($inventoryItems[$integer_key]);
+			}
+
+			/* loop through variants again
+			 */
+			foreach($product['variants'] as $variant){
+
+				if( ! array_key_exists( $variant['inventory_item_id'], $inventoryItems) )
+					continue;
+
+				$this->countMatched(1);
+
+				if( is_null($this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity']) )
+					$this->debug($this->quantityUpdates[ $variant['barcode'] ],'This barcode had strangeness');
+
+				$title = $this->quantityUpdates[ $variant['barcode'] ]['title'] . " ({$variant['title']})";
+				$idAsString = (string) $variant['id'];
+				$inventoryItem = $inventoryItems[$variant['inventory_item_id']];
+
+				// @TODO add note here, and remove all the checks if it exists in all the other places.
+				$variantCustomData = array(
+					'oldData' => array(
+						'title' => $title,
+						'barcode' => $variant['barcode']
+					),
+					'newData' => array(
+						'inventory_quantity' => null,
+						'old_inventory_quantity' => null
+					)
+				);
+
+				// if two Shopify products share a barcode, make a note of it.
+				if( in_array($variant['barcode'], $this->matchedBarcodes) ){
+
+					$variantCustomData['note'][] = "This barcode has a duplicate in the Shopify stock. Both product variants with this barcode will be updated as necessary.";
+				
+				} else {
+					$this->matchedBarcodes[] = $variant['barcode'];
+					// remove this one from the quantityUpdates array b/c we've dealt with it
+					// also, then later we'll know which haven't been matched
+					/**
+					 * 2015-05 commented this so that if Shopify stock has dupe barcodes, 
+					 *         they both get updated to the spreadsheet value.
+					 */
+					// unset($this->quantityUpdates[ $variant['barcode'] ]);
+				}
+				
+				// blacklisted because of barcode entry
+				if(in_array($variant['barcode'], $this->getBlackListedBarcodes())) {
+					// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist');
+					$variantCustomData['note'][] = 'Blacklisted barcode.';
+
+					$this->notChanged[ $idAsString ] 
+						= $this->matchedBlacklist[]
+						= $variantCustomData;
+					continue;
+				}
+
+				// blacklisted because of tag
+				if( in_array($this->getTagToBlockInventorySync(), $tags)) {
+					// $this->debug($variant['barcode'],'Barcode skipped cuz blacklist tags');
+					$variantCustomData['note'][] = 'Blacklisted: this product has ' . $this->getTagToBlockInventorySync() . ' tag';
+
+					$this->notChanged[ $idAsString ] 
+						= $this->matchedBlacklist[]
+						= $variantCustomData;
+					continue;
+				}
+
+				// if Shopify is set not to track inventory, skip this one
+				if( $variant['inventory_management'] != 'shopify' ) {
+					// $this->debug($variant['barcode'],'Barcode skipped cuz shopify is not tracking its inventory');
+					$variantCustomData['note'][] = 'Untracked by Shopify.';
+					$this->notChanged[ $idAsString ] = $variantCustomData;
+					continue;
+				}
+
+				$oldQuantity = $inventoryItem['available'];
+				$quantity = $this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity'];				
+				$variantCustomData['newData']['inventory_quantity'] = $quantity;
+				$variantCustomData['newData']['old_inventory_quantity'] = $oldQuantity;
+
+				// only need to update if the quantity is different.
+				if( $quantity == $oldQuantity) {
+					$this->notChanged[ $idAsString ] = $variantCustomData;
+					continue;
+				}
+
+				// must cast as a string, otherwise the array falls over
+				$this->updatesToRun[ $idAsString ] = $variantCustomData;
+				
+				// run the batch if we've maxed our queue. 
+				if( count($this->updatesToRun) >= $this->sizeOfBatchUpdates )
+					$this->doBatchVariantUpdates();
+
 			}
 		}
 		$this->OKAYTOCOUNTUNMATCHED = true;
@@ -482,7 +496,7 @@ ROW;
 	}
 
 	function getTagToBlockInventorySync(){
-		// @FIXME stub
+		// @TODO stub
 		return '__donotsyncinventory';
 	}
 

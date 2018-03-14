@@ -54,6 +54,7 @@ if( isset($_POST['upload-csv'])) {
 	$titleCSVHeader = $_POST['csv_header_title'];
 	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
 	
+	$Inventory->setLocation( $_POST['location-to-sync'] );
 	$Inventory->updateInventory();
 
 	?> 
@@ -116,21 +117,44 @@ if( isset($_POST['save-blacklist']) ){
 			<form method="post" action="" enctype="multipart/form-data" class="main-actions">
 			<h2>Update Inventory</h2>
 
+			<?php
+			$locs = $s->getLocations();
+			// if there is only one location, automatically use that one. Otherwise, offer a choice
+			if( count($locs) == 1 ) {
+				echo "<input type='hidden' name='location-to-sync' value='{$loc[0]['id']}'>";
+			} else {
+				echo '
+				<p>
+					<b>Choose a Location for which to update inventory</b>
+					<br>
+				';
+				$i=0;
+				foreach($locs as $loc){
+					// set the first location as the default
+					$selected = ($i==0) ? ' checked ' : '';
+					echo "<input type='radio' name='location-to-sync' value='{$loc['id']}' {$selected} id='location-to-sync-{$loc['id']}'> 
+						<label for='location-to-sync-{$loc['id']}'>{$loc['name']}</label>
+						<br>";
+					$i++;
+				}
+			}
+			?>
+
 			<p>
-				<label for="csv_header_inventory">Column header for quantity</label>	
+				<label for="csv_header_inventory" class="block">Column header for quantity</label>	
 				<input type="text" id="csv_header_inventory" value="in_qty_onhand" name="csv_header_inventory" />
 			</p>
 			<p>
-				<label for="csv_header_barcode">Column header for barcode</label>
+				<label for="csv_header_barcode" class="block">Column header for barcode</label>
 				<input type="text" id="csv_header_barcode" value="in_isbn" name="csv_header_barcode" />
 			</p>
 			<p>
-				<label for="csv_header_title">Column header for title</label>
+				<label for="csv_header_title" class="block">Column header for title</label>
 				<input type="text" id="csv_header_title" value="in_title" name="csv_header_title" />
 			</p>
 
 			<p>
-				<label for="csv">Upload a CSV</label>
+				<label for="csv" class="block">Upload a CSV</label>
 				<input type="file" name="csv" id="csv">
 			</p>
 			<p>

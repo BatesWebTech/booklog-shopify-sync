@@ -6,7 +6,8 @@
  */
 
 /* Define requested scope (access rights) - checkout https://docs.shopify.com/api/authentication/oauth#scopes   */
-define('SHOPIFY_SCOPE','read_products,write_products');
+define('SHOPIFY_SCOPE','read_products,write_products,read_inventory,write_inventory');
+
 $headers = apache_request_headers();
 
 if (isset($_GET['code'])) { // if the code param has been sent to this page... we are in Step 2

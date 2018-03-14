@@ -44,6 +44,10 @@ class ShopifyClientWrapper extends ShopifyClient {
 		return $stmt->affected_rows;
 	}
 
+	function getLocations(){
+		$locs = $this->call("GET",'admin/locations.json');
+		return $locs;
+	}
 
 	function getProductCount() {
 		try {
@@ -85,6 +89,13 @@ class ShopifyClientWrapper extends ShopifyClient {
 		$result = $this->call('GET',"admin/products/{$id}.json",$fields);
 		return $result;
 		// return json_decode($result);
+	}
+
+	function getInventoryItems($inventory_item_ids, $location_id){
+		if( is_array($inventory_item_ids) )
+			$inventory_item_ids = implode(',',$inventory_item_ids);
+		$res = $this->call("GET","admin/inventory_levels.json?inventory_item_ids={$inventory_item_ids}&location_id={$location_id}");
+		return $res;
 	}
 
 	function updateItem($type,$id,$updatefields){
