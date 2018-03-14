@@ -18,7 +18,6 @@ class ShopifyInventory {
 
 	// how many items to queue before sending the updates to Shopify
 	private $sizeOfBatchUpdates = 1; // 20
-	private $fourTwentyNines = 0;
 
 	var $counts = array(
 		'matched' => 0,
@@ -120,7 +119,6 @@ ROW;
 			$newData = $data['newData'];
 			$oldData = $data['oldData'];
 			try {
-				try_to_update :
 				$res = $s->updateVariant($vid,$newData);
 				// $this->debug(array('id'=>$vid,'data'=>$newData),'Called updateVariant() with these params');
 				// $this->debug($res,'- - got these results');
@@ -144,27 +142,8 @@ ROW;
 					);
 
 				}
-				if( $this->fourTwentyNines > 0 )
-					$this->fourTwentyNines = $this->fourTwentyNines - 1;
-				if( $this->fourTwentyNines < 0 )
-					$this->fourTwentyNines = 0;
 
 			} catch (ShopifyApiException $e) {
-
-				$headers = $e->getResponseHeaders();
-
-				// if we get a 429 (too many requests), wait and try again
-				// @see https://help.shopify.com/api/getting-started/api-call-limit
-				if( $headers['http_status_code']  == '429' ) {
-
-					$waitTime = 1000000 * ($this->fourTwentyNines + 1.5);
-					$this->fourTwentyNines = $this->fourTwentyNines + 1;
-
-					usleep($waitTime);
-
-					// error_log("429: Wait for {$waitTime} milliseconds...");					
-					goto try_to_update;
-				}
 
 				$err = $e->getResponse();
 				$this->errored[] = array(

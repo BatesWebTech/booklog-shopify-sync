@@ -5,8 +5,48 @@ class ShopifyClientWrapper extends ShopifyClient {
 	private $apiKey;
 	private $password;
 	private $secret;
+	private $fourTwentyNines = 0;
 	var $url;
 	public $db = false;
+
+	function call($method,$path,$params=array()){
+		try {
+			try_to_update:
+			$result = parent::call($method,$path,$params);
+
+			if( $this->fourTwentyNines > 0 )
+				$this->fourTwentyNines = $this->fourTwentyNines - 1;
+			if( $this->fourTwentyNines < 0 )
+				$this->fourTwentyNines = 0;
+				
+		} catch (ShopifyApiException $e){
+
+			$headers = $e->getResponseHeaders();
+
+			// if we get a 429 (too many requests), wait and try again
+			// @see https://help.shopify.com/api/getting-started/api-call-limit
+			if( $headers['http_status_code']  == '429' ) {
+
+				$waitTime = 1000000 * ($this->fourTwentyNines + 1.5);
+				$this->fourTwentyNines = $this->fourTwentyNines + 1;
+
+				usleep($waitTime);
+
+				// error_log("429: Wait for {$waitTime} milliseconds...");					
+				goto try_to_update;
+			}
+
+			// if the error was not 429, rethrow it
+			throw new ShopifyApiException(
+				$e->getMethod(), 
+				$e->getPath(), 
+				$e->getParams(), 
+				$e->getResponseHeaders(), 
+				$e->getResponse()
+			);
+		}
+		return $result;
+	}
 
 	function getDB() {
 		if( $this->db === false) :
