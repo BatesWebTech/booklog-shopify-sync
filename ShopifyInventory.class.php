@@ -10,6 +10,7 @@ class ShopifyInventory {
 	var $matchedBarcodes = array();
 	var $notMatched = array();
 	var $notMatchedFromShopify = array();
+	var $nonExistentInShopifyLocation = array();
 	var $matchedBlacklist = array();
 	var $OKAYTOCOUNTUNMATCHED = false;
 	var $blacklistedBarcodes = false;
@@ -115,11 +116,12 @@ ROW;
 
 	function doBatchVariantUpdates(){
 		global $s;
-		foreach($this->updatesToRun as $vid => $data){
+		foreach($this->updatesToRun as $inventory_item_id => $data){
 			$newData = $data['newData'];
 			$oldData = $data['oldData'];
 			try {
-				$res = $s->updateVariant($vid,$newData);
+
+				$res = $s->updateInventory($inventory_item_id, $this->getLocation(), $newData['inventory_quantity']);
 				// $this->debug(array('id'=>$vid,'data'=>$newData),'Called updateVariant() with these params');
 				// $this->debug($res,'- - got these results');
 				if( ! array_key_exists('errors', $res) ) {
@@ -136,7 +138,7 @@ ROW;
 					$this->changed[] = array(
 						'title' => $oldData['title'],
 						'barcode' => $oldData['barcode'],
-						'newQuantity' => $res['inventory_quantity'],
+						'newQuantity' => $res['available'],
 						'oldQuantity' => $newData['old_inventory_quantity'],
 						'note' => $data['note']
 					);
@@ -228,6 +230,23 @@ ROW;
 			}
 		}
 
+		if( count( $this->nonExistentInShopifyLocation ) ) {
+			echo '<tr class="heading-row">
+				<td colspan="5"><h3>Products that were matched in Shopify, but were not present in the given Location</h3></td>
+			</tr>';
+
+			foreach($this->nonExistentInShopifyLocation as $barcode => $variant) {
+				if( ! array_key_exists('note',$variant) )
+					$variant['note'] = '';
+				echo $this->printResultRow(array(
+					'title' => $variant['title'],
+					'barcode' => $barcode,
+					'oldQuantity' => '',
+					'newQuantity' => '',
+					'note' => $variant['note']
+				),'not-matched');
+			}
+		}
 
 		if( count( $this->notMatched ) ) {
 			echo '<tr class="heading-row">
@@ -284,7 +303,7 @@ ROW;
 			}
 
 			// get all the inventory items for all this product's variants in one call
-			$inventoryItemIds = array();
+			$inventoryItemIds = null;
 			foreach($product['variants'] as $variant){
 
 				if( ! $variant['barcode'] ) {
@@ -298,10 +317,18 @@ ROW;
 					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
 					continue;
 				}
-
+				// first time initialization
+				if( is_null($inventoryItemIds) )
+					$inventoryItemIds = array();
 				$inventoryItemIds[] = $variant['inventory_item_id'];
 			}
+			if( is_null($inventoryItemIds) )
+				continue;
 			$inventoryItems = $s->getInventoryItems( $inventoryItemIds, $this->getLocation() );
+			if( ! $inventoryItems ){
+				$this->nonExistentInShopifyLocation[ $variant['barcode'] ] = $variant;
+				continue;
+			}
 			
 			//modify the array so can access inventory items by their id
 			foreach($inventoryItems as $integer_key=>$i_item){
@@ -322,7 +349,7 @@ ROW;
 					$this->debug($this->quantityUpdates[ $variant['barcode'] ],'This barcode had strangeness');
 
 				$title = $this->quantityUpdates[ $variant['barcode'] ]['title'] . " ({$variant['title']})";
-				$idAsString = (string) $variant['id'];
+				$idAsString = (string) $variant['inventory_item_id'];
 				$inventoryItem = $inventoryItems[$variant['inventory_item_id']];
 
 				// @TODO add note here, and remove all the checks if it exists in all the other places.
@@ -488,7 +515,8 @@ ROW;
 			'changed' => $this->changed,
 			'notChanged' => $this->notChanged,
 			'notMatched' => $this->notMatched,
-			'notMatchedFromShopify' => $this->notMatchedFromShopify
+			'notMatchedFromShopify' => $this->notMatchedFromShopify,
+			'nonExistentInShopifyLocation' => $this->nonExistentInShopifyLocation,
 		);
 
 		$save = $this->_serialize($save);

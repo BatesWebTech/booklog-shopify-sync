@@ -10,6 +10,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 	public $db = false;
 
 	function call($method,$path,$params=array()){
+		// echo '<pre style="font-size:.7em;">---$call---<br>';var_dump(array( 'method' => $method, 'path' => $path, 'params'=> $params )); echo'<br></pre>';
 		try {
 			try_to_update:
 			$result = parent::call($method,$path,$params);
@@ -132,9 +133,11 @@ class ShopifyClientWrapper extends ShopifyClient {
 	}
 
 	function getInventoryItems($inventory_item_ids, $location_id){
+		if( empty($inventory_item_ids) )
+			return array();
 		if( is_array($inventory_item_ids) )
 			$inventory_item_ids = implode(',',$inventory_item_ids);
-		$res = $this->call("GET","admin/inventory_levels.json?inventory_item_ids={$inventory_item_ids}&location_id={$location_id}");
+		$res = $this->call("GET","admin/inventory_levels.json?inventory_item_ids={$inventory_item_ids}&location_ids={$location_id}");
 		return $res;
 	}
 
@@ -150,8 +153,23 @@ class ShopifyClientWrapper extends ShopifyClient {
 	function updateProduct($id,$updatefields){
 		return $this->updateItem('product',$id,$updatefields);
 	}
-	function updateVariant($id,$updatefields){
-		return $this->updateItem('variant',$id,$updatefields);
+
+	/**
+	 * update inventory levels for a single inventory item
+	 *
+	 * @param  int|string  $inventory_item_id 
+	 * @param  int|string  $location_id
+	 * @param  int|string  $newQuantity
+	 * @return result of update call
+	 */
+	function updateInventory($id, $location_id, $newQuantity){
+		$data = array(
+			'inventory_item_id' => $id,
+			"location_id" => $location_id, 
+			"available" => $newQuantity
+		);
+		$result = $this->call('POST',"admin/inventory_levels/set.json",$data);
+		return $result;
 	}
 
 }
