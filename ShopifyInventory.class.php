@@ -593,13 +593,16 @@ ROW;
 		}
 
 		foreach ($report['notChanged'] as $nc) {
+			$note = isset($nc['note'] )
+				? $this->_stringifyArray( $nc['note'] )
+				: '';
 			fputcsv($csv,array(
 				$nc['oldData']['title'],
 				$nc['oldData']['barcode'],
 				$nc['newData']['inventory_quantity'],
 				$nc['newData']['old_inventory_quantity'],
 				'not changed',
-				$this->_stringifyArray( $nc['note'] )
+				$note
 			));
 		}
 
