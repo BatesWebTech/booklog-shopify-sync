@@ -121,7 +121,7 @@ if( isset($_POST['save-blacklist']) ){
 			$locs = $s->getLocations();
 			// if there is only one location, automatically use that one. Otherwise, offer a choice
 			if( count($locs) == 1 ) {
-				echo "<input type='hidden' name='location-to-sync' value='{$loc[0]['id']}'>";
+				echo "<input type='hidden' name='location-to-sync' value='{$locs[0]['id']}'>";
 			} else {
 				echo '
 				<p>
