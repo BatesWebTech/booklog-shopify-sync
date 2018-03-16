@@ -131,10 +131,6 @@ ROW;
 					// the updated data. So we use the value that we saved earlier for the output below
 					$this->countUpdated(1);
 
-					// stop undefined index warnings
-					if( ! array_key_exists('note', $data) )
-						$data['note'] = '';
-
 					$this->changed[] = array(
 						'title' => $oldData['title'],
 						'barcode' => $oldData['barcode'],
@@ -200,8 +196,6 @@ ROW;
 				<td colspan="5" ><h3>Updated</h3></td>
 			</tr>';
 			foreach($this->changed as $variant) {
-				if( ! array_key_exists('note',$variant) )
-					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $variant['barcode'],
@@ -218,8 +212,6 @@ ROW;
 			</tr>';
 
 			foreach($this->notChanged as $variant) {
-				if( ! array_key_exists('note',$variant) )
-					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['oldData']['title'],
 					'barcode' => $variant['oldData']['barcode'],
@@ -236,14 +228,12 @@ ROW;
 			</tr>';
 
 			foreach($this->nonExistentInShopifyLocation as $barcode => $variant) {
-				if( ! array_key_exists('note',$variant) )
-					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $barcode,
 					'oldQuantity' => '',
 					'newQuantity' => '',
-					'note' => $variant['note']
+					'note' => ''
 				),'not-matched');
 			}
 		}
@@ -254,14 +244,12 @@ ROW;
 			</tr>';
 
 			foreach($this->notMatched as $barcode => $variant) {
-				if( ! array_key_exists('note',$variant) )
-					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $barcode,
 					'oldQuantity' => '',
 					'newQuantity' => '',
-					'note' => $variant['note']
+					'note' => ''
 				),'not-matched');
 			}
 		}
@@ -272,14 +260,12 @@ ROW;
 			</tr>';
 
 			foreach($this->notMatchedFromShopify as $barcode => $variant) {
-				if( ! array_key_exists('note',$variant) )
-					$variant['note'] = '';
 				echo $this->printResultRow(array(
 					'title' => $variant['title'],
 					'barcode' => $barcode,
 					'oldQuantity' => '',
 					'newQuantity' => '',
-					'note' => $variant['note']
+					'note' => ''
 				),'not-matched');
 			}
 		}
@@ -352,7 +338,6 @@ ROW;
 				$idAsString = (string) $variant['inventory_item_id'];
 				$inventoryItem = $inventoryItems[$variant['inventory_item_id']];
 
-				// @TODO add note here, and remove all the checks if it exists in all the other places.
 				$variantCustomData = array(
 					'oldData' => array(
 						'title' => $title,
@@ -361,7 +346,8 @@ ROW;
 					'newData' => array(
 						'inventory_quantity' => null,
 						'old_inventory_quantity' => null
-					)
+					),
+					'note' => array()
 				);
 
 				// if two Shopify products share a barcode, make a note of it.
