@@ -276,9 +276,11 @@ ROW;
 	}
 
 	function updateInventory() {
+		$this->debug('Beginning to update inventory...');
 		global $s;
+		$this->debug('About to get list of all products...');
 		$products = $s->getAllProducts();
-
+		$this->debug('Got list of all '.count($products).' products from shopify api');
 		foreach($products as $product) {
 			
 			if( empty($product['tags']) )
@@ -310,7 +312,9 @@ ROW;
 			}
 			if( is_null($inventoryItemIds) )
 				continue;
+			$this->debug('About to get list of inventory items...');
 			$inventoryItems = $s->getInventoryItems( $inventoryItemIds, $this->getLocation() );
+			$this->debug('Got list of '.count($inventoryItems).' inventoryItems from shopify API');
 			if( ! $inventoryItems ){
 				$this->nonExistentInShopifyLocation[ $variant['barcode'] ] = $variant;
 				continue;
@@ -410,6 +414,7 @@ ROW;
 				// must cast as a string, otherwise the array falls over
 				$this->updatesToRun[ $idAsString ] = $variantCustomData;
 				
+				$this->debug('Added this inventory item to list of actual updates needed');
 				// run the batch if we've maxed our queue. 
 				if( count($this->updatesToRun) >= $this->sizeOfBatchUpdates )
 					$this->doBatchVariantUpdates();
@@ -694,12 +699,17 @@ ROW;
 
 		}
 
+		$this->debug('Completed parsing CSV file with '.count($toUpdate).' valid rows');
 		$this->setQuantityUpdates( $toUpdate );
 	}
 
 	function debug($value,$title=false){
 		if( ! $this->debugging) return false;
 
+		if( $this->debugging == 'error_log' ){
+			error_log("$title: ". var_export($value,1));
+			return;
+		}
 		if($title)
 			echo '<p style="margin:0;padding:0"><b>'.$title.'</b></p>';
 		echo '<pre style="font-size:9px;background:hsl(0,0%,94%);padding:1em;">';
