@@ -1,3 +1,7 @@
+# Updates
+## 2018-03
+Update the app to work with the new Inventory API. The permissions have changed, so the app may need to be uninstalled and then reinstalled. Data will remain unchanged during this uninstall/reinstall process.
+
 # About
 This is a Shopify plugin which makes it easier to synchronize inventory between the [Booklog Inventory Management System](http://www.booklog.com/index.html) and the eCommerce platform [Shopify](https://www.shopify.com/). Once installed, the sync process is initiated by manually uploading a csv to Shopify.
 
