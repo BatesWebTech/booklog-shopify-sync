@@ -18,7 +18,7 @@ class ShopifyInventory {
 	var $location_id = null;
 
 	// how many items to queue before sending the updates to Shopify
-	private $sizeOfBatchUpdates = 1; // 20
+	private $sizeOfBatchUpdates = 20;
 
 	var $counts = array(
 		'matched' => 0,
@@ -152,10 +152,10 @@ ROW;
 				// echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
 				$this->countErrored(1);
 			}
+			// make sure proxy is receiving stuff sometimes to avoid timeouts
+			echo '.';
+			flush();
 		}
-		// make sure proxy is receiving stuff sometimes to avoid timeouts
-		echo ' ';
-		flush();
 		$this->updatesToRun = array();
 	}
 
