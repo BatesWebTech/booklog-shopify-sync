@@ -155,7 +155,7 @@ if( isset($_POST['save-blacklist']) ){
 				<input type="text" id="csv_header_title" value="in_title" name="csv_header_title" />
 			</p>
 			<p>
-				<label for="float_reserve">Float Amount</label>
+				<label for="float_reserve" class="block">Float Amount</label>
 				<i>Subtract this number from each product's inventory quantity in the csv before syncing the amount Shopify. So, if, in the uploaded csv, the quantity for Brown Shoes is 25, and this float amount is 8, the Shopify quantity will be set to 17. </i>
 				<input type="number" id="float_reserve" value="0" name="float_reserve">
 			</p>
