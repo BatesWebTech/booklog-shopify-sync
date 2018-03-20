@@ -55,6 +55,8 @@ if( isset($_POST['upload-csv'])) {
 	$Inventory->parseCSV( $_FILES['csv']['tmp_name'], $inventoryCSVHeader, $barcodeCSVHeader, $titleCSVHeader );
 	
 	$Inventory->setLocation( $_POST['location-to-sync'] );
+	if( $_POST['float_reserve'] != 0 )
+		$Inventory->setFloatReserve( $_POST['float_reserve'] );
 	$Inventory->updateInventory();
 
 	?> 
@@ -151,6 +153,11 @@ if( isset($_POST['save-blacklist']) ){
 			<p>
 				<label for="csv_header_title" class="block">Column header for title</label>
 				<input type="text" id="csv_header_title" value="in_title" name="csv_header_title" />
+			</p>
+			<p>
+				<label for="float_reserve">Float Amount</label>
+				<i>Subtract this number from each product's inventory quantity in the csv before syncing the amount Shopify. So, if, in the uploaded csv, the quantity for Brown Shoes is 25, and this float amount is 8, the Shopify quantity will be set to 17. </i>
+				<input type="number" id="float_reserve" value="0" name="float_reserve">
 			</p>
 
 			<p>

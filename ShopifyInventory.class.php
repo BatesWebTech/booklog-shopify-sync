@@ -16,6 +16,7 @@ class ShopifyInventory {
 	var $blacklistedBarcodes = false;
 	var $debugging = false;
 	var $location_id = null;
+	var $floatReserve = 0;
 
 	// how many items to queue before sending the updates to Shopify
 	private $sizeOfBatchUpdates = 20;
@@ -77,6 +78,10 @@ class ShopifyInventory {
 	}
 	function getLocation() {
 		return $this->location_id;
+	}
+	
+	function setFloatReserve( $float ) {
+		$this->floatReserve = (int) $float;
 	}
 
 	function printResultRow($custom,$classes='') {
@@ -401,12 +406,15 @@ ROW;
 				}
 
 				$oldQuantity = $inventoryItem['available'];
-				$quantity = $this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity'];				
-				$variantCustomData['newData']['inventory_quantity'] = $quantity;
+				$quantity = $this->quantityUpdates[ $variant['barcode'] ]['inventory_quantity'];
+				$quantityMinusFloat = $quantity - $this->floatReserve;
+				if($quantityMinusFloat < 0 )
+					$quantityMinusFloat = 0;				
+				$variantCustomData['newData']['inventory_quantity'] = $quantityMinusFloat;
 				$variantCustomData['newData']['old_inventory_quantity'] = $oldQuantity;
 
 				// only need to update if the quantity is different.
-				if( $quantity == $oldQuantity) {
+				if( $quantityMinusFloat == $oldQuantity) {
 					$this->notChanged[ $idAsString ] = $variantCustomData;
 					continue;
 				}

@@ -29,7 +29,7 @@
   0%    { transform: rotate(0deg); }
   100%  { transform: rotate(360deg); }
 }
-
+ 
 .loading {
 
 	p {
@@ -135,11 +135,11 @@ body {
 		}
 	}
 
-	input[type="text"], input[type="file"]
+	input[type="text"], input[type="file"], input[type="number"]
 	{
 		font-weight: 700;
 	}
-	input[type="text"], textarea {
+	input[type="text"], input[type="number"], textarea {
 		padding: .5em;
 		font-size: .9em;
 	}
