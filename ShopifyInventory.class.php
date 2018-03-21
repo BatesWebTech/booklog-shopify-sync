@@ -588,7 +588,7 @@ ROW;
 		$db = $s->getDB();
 
 		if( is_null($id) )
-			$sql = "SELECT report FROM reports WHERE STORE = '{$s->shop_domain}'";
+			$sql = "SELECT report FROM reports WHERE STORE = '{$s->shop_domain}' ORDER BY timestamp DESC";
 		else
 			$sql = "SELECT report FROM reports WHERE STORE = '{$s->shop_domain}' AND id = '{$id}'";
 
@@ -612,11 +612,11 @@ ROW;
 		return $mixed;
 	}
 
-	function downloadReport() {
+	function downloadReport( $id = null) {
 		if( headers_sent() )
 			die( 'Cannot download CSV, function called too late');
 
-		$report = $this->getReport();
+		$report = $this->getReport($id);
 		if(!$report)
 			return false;
 

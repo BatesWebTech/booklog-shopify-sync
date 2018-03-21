@@ -13,7 +13,11 @@ $Inventory = new ShopifyInventory();
 // $Inventory->debugging = "error_log";
 
 if( isset($_POST['download_report']) ) {
-	$result = $Inventory->downloadReport(); // this has it's own "exit" statement
+
+	$reportId = isset($_POST['report-to-download'])
+		? $_POST['report-to-download']
+		: null;
+	$result = $Inventory->downloadReport($reportId); // this has it's own "exit" statement
 	if(!$result)
 		echo 'No previous saved report';
 	else
@@ -98,8 +102,6 @@ if( isset($_POST['upload-csv'])) {
 		<form action="" method="POST">
 			<input type="hidden" name="download_report" value="1">
 			<button id="saveResultsReport" class="action-button">Download this report</button>
-			&nbsp; &nbsp;
-			<a href="reports.php">View all reports</a>
 		</form>
 	</div>
 
@@ -309,8 +311,10 @@ if( isset($_POST['save-blacklist']) ){
 			echo '<h2>Could not purge reports</h2>';
 		}
 	}
+
 	?>
 	<form action="" method="POST" id="purge-form">
+		<input type="hidden" name="current-page" value="reports">
 		<input type="submit" value="Purge Reports" name="purge-reports">
 	</form>
 	<script>
@@ -324,7 +328,7 @@ if( isset($_POST['save-blacklist']) ){
 	</script>
 
 	<?php 
-	if( isset($_POST['get-reports']) ) {
+	if( isset($_POST['get-reports']) || isset($_POST['download_report']) ) {
 
 		// if( $lastReportDate = $Inventory->getLastReportDate() ) {
 		// 	echo '<form action="" method="POST" class="download-report-form page-top">
@@ -336,7 +340,9 @@ if( isset($_POST['save-blacklist']) ){
 		// }
 		$reports = $Inventory->getAllReports();
 		echo <<<FORM
-		<form method="POST" action="" class="main-actions">
+		<form method="POST" action="" class="">
+			<input type="hidden" name="current-page" value="reports">
+
 			<h2>Choose a report to download</h2>
 FORM;
 
@@ -352,6 +358,12 @@ FORM;
 				<label for="'.$reportElementId.'">'.$report['name'].'</label>
 				<br>';
 		}
+
+		echo '
+		<p>
+			<input type="submit" value="Download Report" name="download_report">
+		</p>
+		</form>';
 
 	} else {
 
