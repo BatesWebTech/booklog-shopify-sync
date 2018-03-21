@@ -17,6 +17,7 @@ class ShopifyInventory {
 	var $debugging = false;
 	var $location_id = null;
 	var $floatReserve = 0;
+	var $productPage = 0;
 
 	// how many items to queue before sending the updates to Shopify
 	private $sizeOfBatchUpdates = 20;
@@ -82,6 +83,10 @@ class ShopifyInventory {
 	
 	function setFloatReserve( $float ) {
 		$this->floatReserve = (int) $float;
+	}
+
+	function setProductPage( $int ){
+		$this->productPage = (int) $int;
 	}
 
 	function printResultRow($custom,$classes='') {
@@ -283,9 +288,17 @@ ROW;
 	function updateInventory() {
 		$this->debug('Beginning to update inventory...');
 		global $s;
-		$this->debug('About to get list of all products...');
-		$products = $s->getAllProducts();
-		$this->debug('Got list of all '.count($products).' products from shopify api');
+		if( $this->productPage > 0 ) {
+			$this->debug('About to get list of products on page '.$this->productPage.' ...');
+			$products = $s->getProductsPage( $this->productPage );
+			$this->debug('Got list of '.count($products).' products from shopify api');
+
+		} else {
+			$this->debug('About to get list of all products...');
+			$products = $s->getAllProducts();
+			$this->debug('Got list of all '.count($products).' products from shopify api');
+		}
+
 		foreach($products as $product) {
 			
 			if( empty($product['tags']) )
@@ -509,7 +522,10 @@ ROW;
 		global $s;
 		$db = $s->getDB();
 
+		if( $this->productPage )
+			$pageNumber = "Page_{$this->productPage}_";
 		$save = array(
+			'reportName' => 'Inventory_Sync_Results_' . $pageNumber . date('Y-m-d_H-i-s'),
 			'errored' => $this->errored,
 			'changed' => $this->changed,
 			'notChanged' => $this->notChanged,
@@ -522,16 +538,16 @@ ROW;
 		$save = $db->real_escape_string($save);
 
 		// only allow one saved report per store
-		$id = $db->query("SELECT id FROM reports WHERE store = '{$s->shop_domain}'");
+		// $id = $db->query("SELECT id FROM reports WHERE store = '{$s->shop_domain}'");
 
-		if($id->num_rows > 0 ) {
-			$id = $id->fetch_row();
-			$id = $id[0];
-			$sql = "UPDATE reports SET report = '{$save}', timestamp=NOW() WHERE id={$id}";
-		} else {
+		// if($id->num_rows > 0 ) {
+		// 	$id = $id->fetch_row();
+		// 	$id = $id[0];
+		// 	$sql = "UPDATE reports SET report = '{$save}', timestamp=NOW() WHERE id={$id}";
+		// } else {
 			$sql = "INSERT INTO reports (store,report,timestamp) VALUES
 				('{$s->shop_domain}','{$save}',NOW());";
-		}
+		// }
 		$result = $db->query($sql);
 
 	}
@@ -548,16 +564,46 @@ ROW;
 		
 	}
 
-	function getReport() {
+	function getAllReports(){
+		global $s;
+		$db = $s->getDB();
+		$sql = "SELECT report, id, timestamp FROM reports WHERE store = '{$s->shop_domain}' ORDER BY timestamp DESC ";
+		$result = $db->query($sql);
+		$reports = array();
+		if($result->num_rows === 0)
+			return $reports;
+		while ($row = $result->fetch_object()) {
+			$report = $this->_unserialize($row->report);
+			$reports[] = array(
+				'id' => $row->id,
+				'name' => $report['reportName'],
+				'timestamp' => $row->timestamp
+			);
+		}
+		return $reports;
+	}
+
+	function getReport( $id = null) {
 		global $s;
 		$db = $s->getDB();
 
-		$result = $db->query("SELECT report FROM reports WHERE STORE = '{$s->shop_domain}'");
+		if( is_null($id) )
+			$sql = "SELECT report FROM reports WHERE STORE = '{$s->shop_domain}'";
+		else
+			$sql = "SELECT report FROM reports WHERE STORE = '{$s->shop_domain}' AND id = '{$id}'";
+
+		$result = $db->query($sql);
 		if($result->num_rows == 0)
 			return false;
 		list($report) = $result->fetch_row();
 		$report = $this->_unserialize($report);
 		return $report;
+	}
+
+	function purgeReports() {
+		global $s;
+		$db = $s->getDB();
+		return $db->query("DELETE FROM reports WHERE store = '{$s->shop_domain}'");
 	}
 
 	private function _stringifyArray($mixed){
@@ -575,7 +621,7 @@ ROW;
 			return false;
 
 		header ('Content-Type: text/csv; charset=UTF-8');
-		header ('Content-Disposition: attachment; filename="inventory-update-report_'.date('Y-m-d-H-i-s').'.csv"');
+		header ('Content-Disposition: attachment; filename="' .$report['reportName']. '.csv"');
 
 		$csv = fopen('php://output', 'w');
 
@@ -645,6 +691,16 @@ ROW;
 				'',
 				'not matched (product in Shopify)',
 				$this->_stringifyArray( $nms['note'] )
+			));
+		}
+		foreach ($report['nonExistentInShopifyLocation'] as $nes) {
+			fputcsv($csv,array(
+				$nes['title'],
+				$nes['barcode'],
+				'',
+				'',
+				'not present in this Shopify location',
+				$this->_stringifyArray( $nes['note'] )
 			));
 		}
 

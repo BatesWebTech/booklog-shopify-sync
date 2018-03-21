@@ -106,7 +106,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 		return $products;
 	}
 
-	function getProductsPage($pageNum,$fields) {
+	function getProductsPage($pageNum,$fields=array()) {
 		$input = $fields;
 		$input['page'] = $pageNum;
 		return $this->getProducts($input);

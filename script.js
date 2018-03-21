@@ -76,4 +76,29 @@ jQuery(function($){
 	// 		action: 
 	// 	});
 	// });
+	
+	(function(){
+		var navs = document.querySelectorAll('nav.main-nav a');
+		var pages = document.querySelectorAll('.bates-inventory-sync-page');
+		for (var i = 0; i < navs.length; i++) {
+			navs[i].addEventListener('click',function(e){
+				e.preventDefault();
+				var pageName = this.getAttribute('href');
+				for (var x = 0; x < navs.length; x++) {
+					navs[x].classList.remove('current-page');
+				}
+				
+				pageName = 'bates-inventory-sync-' + pageName.replace('#','');
+				for (var n = 0; n < pages.length; n++) {
+					var pageId = pages[n].getAttribute('id');
+					if( pageId === pageName ){
+						this.classList.add('current-page');
+						pages[n].classList.add('current-page');
+					} else {
+						pages[n].classList.remove('current-page');
+					}
+				}
+			});	
+		}
+	})();
 });

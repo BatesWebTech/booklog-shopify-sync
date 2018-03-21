@@ -73,7 +73,7 @@ body {
 }
 
 
-#saveResultsReport {
+.action-button {
 	padding: .5em;
 	border-radius: 5px;
 	background: hsl(0,0%,50%);
@@ -81,6 +81,8 @@ body {
 	font-size: 1em;
 	cursor: pointer;
 	border: 0;
+	text-decoration: none;
+	display: inline-block;
 
 	&:hover {
 		background: hsl(350, 90%, 15%);
@@ -295,5 +297,29 @@ tr.empty .js-delete-dynamic-row {
 			// force printing of bg colors
 			-webkit-print-color-adjust: exact;
 		}
+	}
+}
+
+nav.main-nav {
+	background: hsl(0,0%,60%);
+	border-top: 1px solid hsl(0,0%,60%);
+
+	a {
+		display: inline-block;
+		padding: 1em;
+		border-right: 2px solid hsl(0,0%,50%);
+		color: white;
+
+		&:hover, &.current-page {
+			background: hsl(0,0%,96%);
+			color: black;
+		}
+	}
+}
+
+.bates-inventory-sync-page {
+	display: none;
+	&.current-page {
+		display: block;
 	}
 }
