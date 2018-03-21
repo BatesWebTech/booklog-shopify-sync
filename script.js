@@ -66,16 +66,6 @@ jQuery(function($){
 
 	});
 
-
-	// $('#saveResultsReport').on('click',function(e){
-		// window.print();
-	// 	e.preventDefault();
-	// 	var results = $('.results-table').html();
-	// 	$.post(ajaxurl,
-	// 	{
-	// 		action: 
-	// 	});
-	// });
 	
 	(function(){
 		var navs = document.querySelectorAll('nav.main-nav a');
@@ -100,5 +90,18 @@ jQuery(function($){
 				}
 			});	
 		}
+	})();
+
+	(function(){
+		var purgeForm = document.getElementById('purge-form');
+		var submit = purgeForm.querySelector('input[type="submit"]');
+		var confirmTextBox = purgeForm.querySelector('input[name="purge-reports-test"]');
+
+		confirmTextBox.addEventListener('keyup',function(){
+			if( this.value == this.dataset.checkfor )
+				submit.classList.remove('disabled');
+			else
+				submit.classList.add('disabled');
+		});
 	})();
 });

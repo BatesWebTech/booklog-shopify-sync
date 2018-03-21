@@ -131,7 +131,7 @@ if( isset($_POST['save-blacklist']) ){
 	}
 
 	$Inventory->saveBlackListedBarcodes($blacklist);
-	echo '<div class="finish-message">Updated Ignored Barcodes</div>';
+	echo '<div class="message">Updated Ignored Barcodes</div>';
 }
 
 
@@ -142,22 +142,41 @@ if( isset($_POST['save-blacklist']) ){
 
 	<div class="col-wrapper">
 		<div class="col half">
-			<form method="post" action="" enctype="multipart/form-data" class="main-actions" id="csv-upload-form">
+			<form method="post" action="" enctype="multipart/form-data" class="main-actions csv-upload-form" id="csv-upload-form">
 
 			<input type="hidden" name="current-page" value="main">
-			<h2>Update Inventory</h2>
+			<h1>Update Inventory</h1>
 
+			<div class="csv-upload-input-section">
+				<label for="csv" class="block">Upload a CSV</label>
+				<input type="file" name="csv" id="csv">
+			</div>
+			
+			<div class="pagebreak-form-inputs">
+				<label class="block">Break Import to multiple pages</label>
+				<p class="incidental">This is useful if the import process is taking too long</p>
+				<p>
+					<input type="checkbox" name="pagebreak_import" value="1" id="pagebreak_import" <?= $pagebreak_importChecked ?>> 
+					<label for="pagebreak_import">Break import into multiple pages</label>
+				</p>
+				<p style="">
+					Page <input type="number" style="width:36px;" min="1" max="<?= $pages ?>" value="<?= $nextPage ?>" name="pagebreak_page_number"> of <?= $pages ?>
+				</p>
+			</div>
+
+			<p>
+				<input type="submit" value="Run Update" name="upload-csv">
+			</p>
+
+			<hr>
+			<h2>Advanced</h2>
 			<?php
 			$locs = $s->getLocations();
 			// if there is only one location, automatically use that one. Otherwise, offer a choice
 			if( count($locs) == 1 ) {
 				echo "<input type='hidden' name='location-to-sync' value='{$locs[0]['id']}'>";
 			} else {
-				echo '
-				<p>
-					<b>Choose a Location for which to update inventory</b>
-					<br>
-				';
+				echo '<label class="block">Choose a Location for which to update inventory</label>';
 				$i=0;
 				foreach($locs as $loc){
 					// set the first location as the default
@@ -197,44 +216,24 @@ if( isset($_POST['save-blacklist']) ){
 
 			?>
 
-			<p>
-				<label for="csv_header_inventory" class="block">Column header for quantity</label>	
-				<input type="text" id="csv_header_inventory" value="<?= $csv_header_inventory ?>" name="csv_header_inventory" />
-			</p>
-			<p>
-				<label for="csv_header_barcode" class="block">Column header for barcode</label>
-				<input type="text" id="csv_header_barcode" value="<?= $csv_header_barcode ?>" name="csv_header_barcode" />
-			</p>
-			<p>
-				<label for="csv_header_title" class="block">Column header for title</label>
-				<input type="text" id="csv_header_title" value="<?= $csv_header_title ?>" name="csv_header_title" />
-			</p>
-			<p>
-				<label for="float_reserve" class="block">Float Amount</label>
-				<i>Subtract this number from each product's inventory quantity in the csv before syncing the amount in Shopify. So, if, in the uploaded csv, the quantity for Brown Shoes is 25, and this float amount is 1, the Shopify quantity will be set to 24. The default value is 0 and should not be changed unless it is a special circumstance.</i>
-				<input type="number" id="float_reserve" value="<?= $float_reserve ?>" name="float_reserve">
-			</p>
+			<label for="csv_header_inventory" class="block">Column header for quantity</label>	
+			<input type="text" id="csv_header_inventory" value="<?= $csv_header_inventory ?>" name="csv_header_inventory" />
 
-			<p>
-				<label for="csv" class="block">Upload a CSV</label>
-				<input type="file" name="csv" id="csv">
-			</p>
-			<p>
-				<label class="block">Break Import to multiple pages</label>
-				<i>This is useful if the import process is taking too long</i><br>
-				<input type="checkbox" name="pagebreak_import" value="1" id="pagebreak_import" <?= $pagebreak_importChecked ?>> <label for="pagebreak_import">Break import into multiple pages</label>
-				<br>
-				&nbsp;&nbsp;&nbsp;Page <input type="number" style="width:36px;" min="1" max="<?= $pages ?>" value="<?= $nextPage ?>" name="pagebreak_page_number"> of <?= $pages ?>
-			</p>
+			<label for="csv_header_barcode" class="block">Column header for barcode</label>
+			<input type="text" id="csv_header_barcode" value="<?= $csv_header_barcode ?>" name="csv_header_barcode" />
 
-			<p>
-				<input type="submit" value="Run Update" name="upload-csv">
-			</p>
+			<label for="csv_header_title" class="block">Column header for title</label>
+			<input type="text" id="csv_header_title" value="<?= $csv_header_title ?>" name="csv_header_title" />
+
+			<label for="float_reserve" class="block">Float Amount</label>
+			<p class="incidental">Subtract this number from each product's inventory quantity in the csv before syncing the amount in Shopify. So, if, in the uploaded csv, the quantity for Brown Shoes is 25, and this float amount is 1, the Shopify quantity will be set to 24. The default value is 0 and should not be changed unless it is a special circumstance.</p>
+			<input type="number" id="float_reserve" value="<?= $float_reserve ?>" name="float_reserve">
+
 			</form>
 		</div>
 
 		<div class="col half">
-			<form method="post"  class="main-actions">
+			<form method="post"  class="main-actions secondary-form ignored-barcodes-form">
 
 			<input type="hidden" name="current-page" value="main">
 
@@ -272,6 +271,7 @@ if( isset($_POST['save-blacklist']) ){
 				</p>
 			</form>
 
+			<div class="secondary-form">
 			<h3>Products which are ignored because of the <i><?= $Inventory->getTagToBlockInventorySync() ?></i> tag</h3>
 			<ol>
 			<?php
@@ -292,6 +292,7 @@ if( isset($_POST['save-blacklist']) ){
 				echo '<p>No products found</p>';
 			}
 			?>
+			</div>
 		</div>
 	</div>
 	
@@ -305,43 +306,41 @@ if( isset($_POST['save-blacklist']) ){
 
 	<?php
 	if( isset($_POST['purge-reports']) ){
+		$msg = '';
 		if( $_POST['purge-reports-test'] == 'purge reports') {
 			if( $Inventory->purgeReports() ){
-				echo '<h2>Purged Reports</h2>';
+				$msg .= '<p>Purged Reports</p>';
 			} else {
-				echo '<h2>Could not purge reports</h2>';
+				$msg .= '<p class="error">Could not purge reports</p>';
 			}
 		} else {
-			echo '<h2>Whoops, you didn\'t type the correct confirmation text.</h2>';
+			$msg .= '<p class="error">Whoops, you didn\'t type the correct confirmation text.</p>';
 		}
+		echo '<div class="message">'.$msg.'</div>';
 	}
 
 	?>
-	<form action="" method="POST" id="purge-form">
-		<input type="hidden" name="current-page" value="reports">
-		<input type="submit" value="Purge Reports" name="purge-reports">
-		Type "purge reports": <input type="text" name="purge-reports-test">
-	</form>
 
 	<?php 
 	if( isset($_POST['get-reports']) || isset($_POST['download_report']) ) {
 
 		$reports = $Inventory->getAllReports();
 		if( ! $reports ) {
-			echo '<h2>There are no reports. :(</h2>';
+			echo '<div class="message">There are no reports. 🙁</div>';
 		} else {
-			echo <<<FORM
+			echo '
 			<form method="POST" action="" class="">
 				<input type="hidden" name="current-page" value="reports">
 
-				<h2>Choose a report to download</h2>
-FORM;
+				<h3>Choose a report to download</h3>
+				<p class="incidental">Selecting multiple reports will merge them into a single output file.</p>
+				';
 
 			$date = false;
 			foreach($reports as $report){
 				$reportDate = date("F j, Y (l)",strtotime($report['timestamp']));
 				if( $reportDate !== $date){
-					echo '<h3>From ' . $reportDate . '</h3>';
+					echo '<h4>From ' . $reportDate . '</h4>';
 					$date = $reportDate;
 				}
 				$reportElementId = "report-download-option-{$report['id']}";
@@ -362,13 +361,19 @@ FORM;
 		echo <<<FORM
 		<form method="POST" action="" class="main-actions">
 			<input type="hidden" name="current-page" value="reports">
-			<p>
-				<input type="submit" value="Get Reports" name="get-reports">
-			</p>
+			<input type="submit" value="Get Reports" name="get-reports">
 		</form>
 FORM;
 	}
 	?>
+
+	<form action="" method="POST" id="purge-form" class="secondary-form">
+		<h3>Purge Records</h3>
+		<input type="hidden" name="current-page" value="reports">
+		<span class="incidental">To confirm, please type <b>purge reports</b></span> <input type="text" name="purge-reports-test" data-checkfor="purge reports">
+		<br>
+		<input type="submit" value="Purge Reports" name="purge-reports" class="disabled">
+	</form>
 
 </div><!-- end pageReports -->
 </body>

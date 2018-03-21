@@ -60,6 +60,8 @@
 body {
 	font-size: 1.07143rem;
 	font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Roboto", "Segoe UI", "Helvetica Neue", sans-serif;
+	margin: 2em 0 0;
+	padding: 0;
 }
 
 .success {
@@ -72,6 +74,14 @@ body {
 	color: hsl(40,80%,50%);
 }
 
+.incidental {
+	font-size: .9em;
+	color: hsl(0,0%,40%);
+	font-style: italic;
+}
+p.incidental {
+	margin: 2px 0;
+}
 
 .action-button {
 	padding: .5em;
@@ -109,51 +119,76 @@ body {
 	border: 1px solid hsl(0,100%,40%);
 	background: hsl(0,80%,95%);
 }
-.main-actions {
-	margin: 1.1em;
-	padding: .8em;
-	position: relative;
 
+form {
 	td {
 		vertical-align: top;
 	}
+}
+label.block {
+	display: block;
+	font-weight: 200;
+	padding: .5em 0 .3em;
+}
 
-	label.block {
-		display: block;
-		font-weight: 200;
-		padding: .5em 0 .3em;
-	}
+input[type="submit"] {
+	cursor: pointer;
+	padding: .9em;
+	background: hsl(350, 78%, 30%);
+	color: white;
+	border: none;
+	border-radius: 5px;
 
-	input[type="submit"] {
-		cursor: pointer;
-		padding: .9em;
-		background: hsl(350, 78%, 30%);
-		color: white;
-		border: none;
-		border-radius: 5px;
+	&:hover {
+		background: darken(hsl(350,78%,30%),15%);
+	}
+}
 
-		&:hover {
-			background: darken(hsl(350,78%,30%),15%);
-		}
-	}
+input.disabled {
+	opacity: .4;
+	pointer-events: none;
+	cursor: not-allowed;
+}
 
-	input[type="text"], input[type="file"], input[type="number"]
-	{
-		font-weight: 700;
-	}
-	input[type="text"], input[type="number"], textarea {
-		padding: .5em;
-		font-size: .9em;
-	}
-	input[type="file"] {
-		padding: .5em 0;
-		font-size: .9em;
-	}
+input[type="text"], input[type="file"], input[type="number"]
+{
+	font-weight: 700;
+}
+input[type="text"], input[type="number"], textarea {
+	padding: .5em;
+	font-size: .9em;
+}
+input[type="file"] {
+	padding: .5em 0;
+	font-size: .9em;
+}
 
-	textarea {
-		font-family: inherit;
-	}
+textarea {
+	font-family: inherit;
+}
 
+
+.main-actions {
+	margin: 1.1em 0;
+	// padding: .8em;
+	position: relative;
+
+}
+
+.csv-upload-form {
+	input[name="float_reserve"] {
+		width: 2em;
+	}
+}
+
+.secondary-form {
+	padding: .8em;
+	background: hsl(0,0%,93%);
+	border: 1px solid hsl(0,0%,70%);
+
+	h1, h2, h3 {
+		margin-top: 0;
+	}
 }
 
 .upload-csv.loading {
@@ -165,6 +200,24 @@ body {
 	input, label, textarea
 	{
 		opacity: .2;
+	}
+}
+
+.ignored-barcodes-form {
+	font-size: .8em;
+
+	table {
+		width: 100%;
+
+		input[type="text"],
+		textarea
+		{
+			width: 80%;
+			height: 1.5em;
+			padding: 2px;
+			border: none;
+			font-weight: normal;
+		}
 	}
 }
 
@@ -272,9 +325,10 @@ tr.empty .js-delete-dynamic-row {
 @media(min-width:550px) {
 	.col-wrapper {
 		display: flex;
+		justify-content: space-between;
 
 		.col.half {
-			width: 50%;
+			width: 48%;
 		}
 	}
 }
@@ -301,25 +355,62 @@ tr.empty .js-delete-dynamic-row {
 }
 
 nav.main-nav {
-	background: hsl(0,0%,60%);
-	border-top: 1px solid hsl(0,0%,60%);
+	background: hsl(235, 22%, 65%)	;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 70;
 
 	a {
 		display: inline-block;
-		padding: 1em;
-		border-right: 2px solid hsl(0,0%,50%);
+		padding: .5em 1em;
 		color: white;
+		margin: 8px 0 0 10px;
+		border-radius: 4px 4px 0 0;
+		text-decoration: none;
 
-		&:hover, &.current-page {
-			background: hsl(0,0%,96%);
+		&:hover {
+			background: hsla(0,0%,96%,.6);
 			color: black;
+		}
+		&.current-page {
+			pointer-events: none;
+			color: black;
+			background: hsl(0,0%,96%);
 		}
 	}
 }
 
 .bates-inventory-sync-page {
 	display: none;
+	padding: 2em;
+
 	&.current-page {
 		display: block;
+	}
+}
+
+.pagebreak-form-inputs {
+	padding: .9em;
+	background: hsl(0,0%,93%);
+	border: 1px solid hsl(0,0%,85%);
+	margin: .5em 0;
+}
+.csv-upload-input-section {
+	font-size: 1.4em;
+	margin: 1em 0;
+}
+
+.message {
+	margin: 1.5em 0;
+	padding: .5em 1em;
+	font-size: 1.1em;
+	background: hsl(0,0%,15%);
+	border: 1px solid black;
+	color: white;
+	border-radius: 5px;
+
+	.error {
+		color: hsl(0,80%,80%);
 	}
 }
