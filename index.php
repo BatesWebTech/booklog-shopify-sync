@@ -14,10 +14,10 @@ $Inventory = new ShopifyInventory();
 
 if( isset($_POST['download_report']) ) {
 
-	$reportId = isset($_POST['report-to-download'])
-		? $_POST['report-to-download']
+	$reportIds = isset($_POST['reports-to-download'])
+		? $_POST['reports-to-download']
 		: null;
-	$result = $Inventory->downloadReport($reportId); // this has it's own "exit" statement
+	$result = $Inventory->downloadReports($reportIds); // this has it's own "exit" statement
 	if(!$result)
 		echo 'No previous saved report';
 	else
@@ -305,10 +305,14 @@ if( isset($_POST['save-blacklist']) ){
 
 	<?php
 	if( isset($_POST['purge-reports']) ){
-		if( $Inventory->purgeReports() ){
-			echo '<h2>Purged Reports</h2>';
+		if( $_POST['purge-reports-test'] == 'purge reports') {
+			if( $Inventory->purgeReports() ){
+				echo '<h2>Purged Reports</h2>';
+			} else {
+				echo '<h2>Could not purge reports</h2>';
+			}
 		} else {
-			echo '<h2>Could not purge reports</h2>';
+			echo '<h2>Whoops, you didn\'t type the correct confirmation text.</h2>';
 		}
 	}
 
@@ -316,54 +320,42 @@ if( isset($_POST['save-blacklist']) ){
 	<form action="" method="POST" id="purge-form">
 		<input type="hidden" name="current-page" value="reports">
 		<input type="submit" value="Purge Reports" name="purge-reports">
+		Type "purge reports": <input type="text" name="purge-reports-test">
 	</form>
-	<script>
-	(function(){
-		var purgeButton = document.querySelector('input[name="purge-reports"]');
-		purgeButton.addEventListener('click',function(e){
-			if( ! confirm('Are you sure you want to purge all reports?') )
-				return false;
-		});
-	})();
-	</script>
 
 	<?php 
 	if( isset($_POST['get-reports']) || isset($_POST['download_report']) ) {
 
-		// if( $lastReportDate = $Inventory->getLastReportDate() ) {
-		// 	echo '<form action="" method="POST" class="download-report-form page-top">
-		// 		<input type="hidden" name="download_report" value="1">
-		// 		<p>Last report run: <b>'. date('F j, Y (g:i a)',strtotime($lastReportDate)) .'</b></p>
-		// 		<button class="action-button">Download it</button>
-		// 	</form>
-		// 	';
-		// }
 		$reports = $Inventory->getAllReports();
-		echo <<<FORM
-		<form method="POST" action="" class="">
-			<input type="hidden" name="current-page" value="reports">
+		if( ! $reports ) {
+			echo '<h2>There are no reports. :(</h2>';
+		} else {
+			echo <<<FORM
+			<form method="POST" action="" class="">
+				<input type="hidden" name="current-page" value="reports">
 
-			<h2>Choose a report to download</h2>
+				<h2>Choose a report to download</h2>
 FORM;
 
-		$date = false;
-		foreach($reports as $report){
-			$reportDate = date("F j, Y (l)",strtotime($report['timestamp']));
-			if( $reportDate !== $date){
-				echo '<h3>From ' . $reportDate . '</h3>';
-				$date = $reportDate;
+			$date = false;
+			foreach($reports as $report){
+				$reportDate = date("F j, Y (l)",strtotime($report['timestamp']));
+				if( $reportDate !== $date){
+					echo '<h3>From ' . $reportDate . '</h3>';
+					$date = $reportDate;
+				}
+				$reportElementId = "report-download-option-{$report['id']}";
+				echo '<input type="checkbox" name="reports-to-download[]" value="'.$report['id'].'" id="'.$reportElementId.'" > 
+					<label for="'.$reportElementId.'">'.$report['name'].'</label>
+					<br>';
 			}
-			$reportElementId = "report-download-option-{$report['id']}";
-			echo '<input type="radio" name="report-to-download" value="'.$report['id'].'" id="'.$reportElementId.'" > 
-				<label for="'.$reportElementId.'">'.$report['name'].'</label>
-				<br>';
-		}
 
-		echo '
-		<p>
-			<input type="submit" value="Download Report" name="download_report">
-		</p>
-		</form>';
+			echo '
+			<p>
+				<input type="submit" value="Download Report" name="download_report">
+			</p>
+			</form>';
+		}
 
 	} else {
 

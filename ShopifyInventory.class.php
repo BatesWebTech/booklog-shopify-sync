@@ -612,11 +612,43 @@ ROW;
 		return $mixed;
 	}
 
-	function downloadReport( $id = null) {
+	private function mergeReports($one,$two){
+		if( empty($one) && empty($two) ){
+			throw new Exception("Error combining reports into one. Two empties given", 1);
+			return false;
+		}
+			
+		if( empty($one) ) return $two;
+		if( empty($two) ) return $one;
+
+		$out = array();
+		foreach($one as $type=>$rows){
+			$out[$type] = array_merge( $one[$type], $two[$type] );
+		}
+		return $out;
+
+	}
+
+	function downloadReports( $id = null) {
 		if( headers_sent() )
 			die( 'Cannot download CSV, function called too late');
 
-		$report = $this->getReport($id);
+		if( is_array($id) && count($id) == 1)
+			$id = $id[0];
+
+		if( is_null($id) ) {
+			$report = $this->getReport();
+		} elseif (is_array($id) ){
+			$reportMerge = array();
+			foreach($id as $reportId){
+				$report = $this->getReport($reportId);
+				$reportMerge = $this->mergeReports($reportMerge,$report);
+			}
+			$report = $reportMerge;
+			$report['reportName'] = "Inventory_Sync_Results_MERGED-REPORT_ids_".join('-',$id); 
+		} else {
+			$report = $this->getReport($id);
+		}
 		if(!$report)
 			return false;
 
