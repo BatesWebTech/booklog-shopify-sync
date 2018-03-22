@@ -129,6 +129,7 @@ label.block {
 	display: block;
 	font-weight: 200;
 	padding: .5em 0 .3em;
+	font-size: 1.1em;
 }
 
 input[type="submit"] {
@@ -144,7 +145,7 @@ input[type="submit"] {
 	}
 }
 
-input.disabled {
+.disabled {
 	opacity: .4;
 	pointer-events: none;
 	cursor: not-allowed;
@@ -391,9 +392,10 @@ nav.main-nav {
 }
 
 .pagebreak-form-inputs {
-	padding: .9em;
-	background: hsl(0,0%,93%);
-	border: 1px solid hsl(0,0%,85%);
+	padding: .9em 0;
+	// padding: .9em;
+	// background: hsl(0,0%,93%);
+	// border: 1px solid hsl(0,0%,85%);
 	margin: .5em 0;
 }
 .csv-upload-input-section {

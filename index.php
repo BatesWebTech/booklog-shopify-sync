@@ -29,18 +29,16 @@ if( isset($_POST['download_report']) ) {
 <html>
 <head>
 	<title>Bates Inventory Updater</title>
-	<link rel="stylesheet" href="style.css?v7" type="text/css">
+	<link rel="stylesheet" href="style.css?v=8.0.0" type="text/css">
 	<script src="https://cdn.shopify.com/s/assets/external/app.js"></script>
 	<script type="text/javascript">
-	var shop = 'https://<?php echo STORE_NAME ?>';
-	ajaxurl = shop + '/ajax.php';
-    ShopifyApp.init({
-      apiKey: '<?php echo API_KEY ?>',
-      shopOrigin: shop
-    });
-  </script>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
-	<script src="script.js?v7"></script>
+	    ShopifyApp.init({
+	      apiKey: '<?php echo API_KEY ?>',
+	      shopOrigin: 'https://<?php echo STORE_NAME ?>'
+	    });
+	</script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="script.js?v=8.0.0"></script>
 </head>
 <body>
 
@@ -142,6 +140,42 @@ if( isset($_POST['save-blacklist']) ){
 
 	<div class="col-wrapper">
 		<div class="col half">
+
+			<?php
+
+			// input defaults
+			$csv_header_inventory = isset($_POST['csv_header_inventory'])
+				? $_POST['csv_header_inventory']
+				: "in_qty_onhand";
+			$csv_header_barcode = isset($_POST['csv_header_barcode'])
+				? $_POST['csv_header_barcode']
+				: "in_isbn";
+			$csv_header_title = isset($_POST['csv_header_title'])
+				? $_POST['csv_header_title']
+				: "in_title";
+			$float_reserve = isset($_POST['float_reserve'])
+				? $_POST['float_reserve']
+				: 0;
+			$count = $s->getProductCount();
+			$pages = ceil($count/50);
+			if( isset($_POST['pagebreak_page_number']) ) {
+				$nextPage = $_POST['pagebreak_page_number'] + 1;
+				if( $nextPage > $pages ){
+					$nextPage = 0; 
+					$lastPageText = "you just did the final page, which was {$_POST['pagebreak_page_number']}";
+				} else {
+					$lastPageText = "you just did page {$_POST['pagebreak_page_number']}";
+				}
+				$lastPageText = " &nbsp; <span class='incidental'>({$lastPageText})</span>";
+			} else {
+				$nextPage = '1';
+			}
+			$pagebreak_importChecked = isset($_POST['pagebreak_import'])
+				? ' checked '
+				: '';
+
+			?>
+
 			<form method="post" action="" enctype="multipart/form-data" class="main-actions csv-upload-form" id="csv-upload-form">
 
 			<input type="hidden" name="current-page" value="main">
@@ -159,8 +193,8 @@ if( isset($_POST['save-blacklist']) ){
 					<input type="checkbox" name="pagebreak_import" value="1" id="pagebreak_import" <?= $pagebreak_importChecked ?>> 
 					<label for="pagebreak_import">Break import into multiple pages</label>
 				</p>
-				<p style="">
-					Page <input type="number" style="width:36px;" min="1" max="<?= $pages ?>" value="<?= $nextPage ?>" name="pagebreak_page_number"> of <?= $pages ?>
+				<p class="js-pagebreak-more-information">
+					Page <input type="number" style="width:36px;" min="1" max="<?= $pages ?>" value="<?= $nextPage ?>" name="pagebreak_page_number"> of <?= $pages . $lastPageText ?>
 				</p>
 			</div>
 
@@ -187,32 +221,6 @@ if( isset($_POST['save-blacklist']) ){
 					$i++;
 				}
 			}
-
-			// input defaults
-			$csv_header_inventory = isset($_POST['csv_header_inventory'])
-				? $_POST['csv_header_inventory']
-				: "in_qty_onhand";
-			$csv_header_barcode = isset($_POST['csv_header_barcode'])
-				? $_POST['csv_header_barcode']
-				: "in_isbn";
-			$csv_header_title = isset($_POST['csv_header_title'])
-				? $_POST['csv_header_title']
-				: "in_title";
-			$float_reserve = isset($_POST['float_reserve'])
-				? $_POST['float_reserve']
-				: 0;
-			$count = $s->getProductCount();
-			$pages = ceil($count/50);
-			if( isset($_POST['pagebreak_page_number']) ) {
-				$nextPage = $_POST['pagebreak_page_number'] + 1;
-				if( $nextPage > $pages )
-					$nextPage = 0; 
-			} else {
-				$nextPage = '1';
-			}
-			$pagebreak_importChecked = isset($_POST['pagebreak_import'])
-				? ' checked '
-				: '';
 
 			?>
 
@@ -368,7 +376,7 @@ FORM;
 	?>
 
 	<form action="" method="POST" id="purge-form" class="secondary-form">
-		<h3>Purge Records</h3>
+		<h3>Purge Reports</h3>
 		<input type="hidden" name="current-page" value="reports">
 		<span class="incidental">To confirm, please type <b>purge reports</b></span> <input type="text" name="purge-reports-test" data-checkfor="purge reports">
 		<br>

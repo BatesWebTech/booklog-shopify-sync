@@ -104,4 +104,22 @@ jQuery(function($){
 				submit.classList.add('disabled');
 		});
 	})();
+
+	(function(){
+		var checkbox = document.querySelector('input[name="pagebreak_import"]');
+		var moreInfo = document.querySelector('.js-pagebreak-more-information');
+
+		var disableIfNecessary = function() {
+			if( checkbox.checked ){
+				moreInfo.classList.remove('disabled');
+			} else {
+				moreInfo.classList.add('disabled');
+			}
+		}
+		disableIfNecessary();
+		checkbox.addEventListener('change',function(){
+			disableIfNecessary();
+		});
+
+	})();
 });
