@@ -135,10 +135,24 @@ class ShopifyClientWrapper extends ShopifyClient {
 	function getInventoryItems($inventory_item_ids, $location_id){
 		if( empty($inventory_item_ids) )
 			return array();
-		if( is_array($inventory_item_ids) )
-			$inventory_item_ids = implode(',',$inventory_item_ids);
-		$res = $this->call("GET","admin/inventory_levels.json?inventory_item_ids={$inventory_item_ids}&location_ids={$location_id}");
-		return $res;
+		if( ! is_array($inventory_item_ids) )
+			$inventory_item_ids = explode(',',$inventory_item_ids);
+		// inventory_levels.json has a max of 50 inventory_item_ids at a time
+		// @see https://help.shopify.com/en/api/reference/inventory/inventorylevel#endpoints
+		$i=0;
+		$at_a_time = 50;
+		$out = [];
+		$chunkedIds = array_slice($inventory_item_ids, $i, $at_a_time);
+		while ( count($chunkedIds) ) {
+			$inventoryIdsString = implode(',',$chunkedIds);
+			$res = $this->call("GET","admin/inventory_levels.json?inventory_item_ids={$inventoryIdsString}&location_ids={$location_id}&limit=250");
+			if( is_array($res) )
+				$out = array_merge($out,$res);
+			$i = $i + $at_a_time;
+			$chunkedIds = array_slice($inventory_item_ids, $i, $at_a_time);
+		}
+
+		return $out;
 	}
 
 	function updateItem($type,$id,$updatefields){
