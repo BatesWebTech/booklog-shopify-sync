@@ -313,7 +313,7 @@ ROW;
 			foreach($product['variants'] as $variant){
 
 				if( ! $variant['barcode'] ) {
-					$this->notMatchedFromShopify[ $variant['barcode'] ] = $variant;
+					$this->notMatchedFromShopify[] = $variant;
 					// $this->debug("{$variant['title']}", "skipped because no barcode (shopify variant title) ");
 					continue;
 				}
