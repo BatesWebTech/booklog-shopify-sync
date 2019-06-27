@@ -126,7 +126,9 @@ ROW;
 
 	function doBatchVariantUpdates(){
 		global $s;
+		$i =0;
 		foreach($this->updatesToRun as $inventory_item_id => $data){
+			$i++;
 			$newData = $data['newData'];
 			$oldData = $data['oldData'];
 			try {
@@ -165,6 +167,8 @@ ROW;
 							<li>location_id: ".$this->getLocation()."
 							<li>available: {$newData['inventory_quantity']}
 							<li>apipath: admin/inventory_levels/set.json
+							<li>number of updates in this batch: ".count($this->updatesToRun)."
+							<li>This item position in update queue: {$i}
 						</ul>
 						</pre>",
 				);
