@@ -157,7 +157,16 @@ ROW;
 				$this->errored[] = array(
 					'title' => $oldData['title'],
 					'barcode' => $oldData['barcode'],
-					'error' => var_export($err['errors'],1)
+					'error' => "Shopify Error: " 
+						. var_export($err['errors'], 1)
+						. "<br>Request Data<br>
+						<ul>
+							<li>inventory_item_id: {$inventory_item_id}
+							<li>location_id: ".$this->getLocation()."
+							<li>available: {$newData['inventory_quantity']}
+							<li>apipath: admin/inventory_levels/set.json
+						</ul>
+						</pre>",
 				);
 				// echo '<li style="color:red">Error: '. var_dump($err['errors']) .'</li>';
 				$this->countErrored(1);
