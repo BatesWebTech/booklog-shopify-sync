@@ -11,7 +11,8 @@ class ShopifyClientWrapper extends ShopifyClient {
 	public $apiVersion = '2019-07';
 
 	function call($method,$path,$params=array()){
-		// echo '<pre style="font-size:.7em;">---$call---<br>';var_dump(array( 'method' => $method, 'path' => $path, 'params'=> $params )); echo'<br></pre>';
+		// error_log(var_export($path,1));
+		// error_log(var_export($params,1));
 		try {
 			try_to_update:
 			$result = parent::call($method,$path,$params);
@@ -118,12 +119,20 @@ class ShopifyClientWrapper extends ShopifyClient {
 	function getAllProducts($fields=array()){
 		$allProducts = array();
 		$limit = 50;
-		$totalProducts = $this->getProductCount();
-		$pageCount = ceil( $totalProducts / $limit );
 
-		for( $pageNum=1; $pageNum<=$pageCount; $pageNum++ ) {
-			$products = $this->getProductsPage($pageNum,$fields);
-			$allProducts = array_merge( $allProducts, $products);
+		$fields = array_merge([
+			'limit' => $limit,
+		], $fields);
+
+		// get first batch to populate our page cursors, with no "page_info" 
+		// field (which is where the cursor for the next page goes)
+		$allProducts = $this->getProducts($fields);
+		$nextCursor = $this->getNextPageCursor();
+		while( $nextCursor !== false  ) {
+			$fields['page_info'] = $nextCursor;
+			$products = $this->getProducts( $fields );
+			$allProducts = array_merge($allProducts, $products);
+			$nextCursor = $this->getNextPageCursor();
 		}
 
 		return $allProducts;
@@ -148,7 +157,10 @@ class ShopifyClientWrapper extends ShopifyClient {
 		$chunkedIds = array_slice($inventory_item_ids, $i, $at_a_time);
 		while ( count($chunkedIds) ) {
 			$inventoryIdsString = implode(',',$chunkedIds);
-			// @FIXME check this out and see if we need to use cursors?
+			// @NOTE Technically this endpoint does require cursors to page 
+			// through results, but because we're limited to supplying 50 item ids, 
+			// we'd never get to the max unless we had 5 locations, which won't 
+			// happen in my lifetime.
 			$res = $this->call("GET","admin/api/{$this->apiVersion}/inventory_levels.json?inventory_item_ids={$inventoryIdsString}&location_ids={$location_id}&limit=250");
 			if( is_array($res) )
 				$out = array_merge($out,$res);
@@ -188,6 +200,38 @@ class ShopifyClientWrapper extends ShopifyClient {
 		);
 		$result = $this->call('POST',"admin/api/{$this->apiVersion}/inventory_levels/set.json",$data);
 		return $result;
+	}
+
+	function getAdjacentPageCursor ( $side='next' ) {
+		if( ! isset($this->last_response_headers['link']) )
+			return false;
+
+		$links = explode( ',' , $this->last_response_headers['link'] );
+		foreach($links as $link){
+			// A link looks like this:
+			//  <https://bates-college-store.myshopify.com/admin/api/2019-07/products.json?limit=150&page_info=eyJkaXJIn0>; rel="previous"
+			// (I've shortened the page_info value for readability here)
+			// Our regex:
+			// 1. Starts at the < 
+			// 2. capture everything after the ?
+			// 3. until and before the >
+			preg_match("_<[^?]*\?([^>]*)>_", $link, $matches);
+			parse_str($matches[1], $params);
+
+			$lookfor = ( $side=='next' )
+				? 'rel="next"'
+				: 'rel="previous"';
+
+			if( strpos($link, $lookfor) !== false)
+				return $params['page_info'];
+		}
+		return false;
+	}
+	function getNextPageCursor () {
+		return $this->getAdjacentPageCursor('next');
+	}
+	function getPrevPageCursor () {
+		return $this->getAdjacentPageCursor('prev');
 	}
 
 }
