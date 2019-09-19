@@ -8,12 +8,16 @@ class ShopifyClientWrapper extends ShopifyClient {
 	private $fourTwentyNines = 0;
 	var $url;
 	public $db = false;
+	public $apiVersion = '2019-07';
 
 	function call($method,$path,$params=array()){
 		// echo '<pre style="font-size:.7em;">---$call---<br>';var_dump(array( 'method' => $method, 'path' => $path, 'params'=> $params )); echo'<br></pre>';
 		try {
 			try_to_update:
 			$result = parent::call($method,$path,$params);
+			if( isset($this->last_response_headers['X-Shopify-Api-Deprecated-Reason']) ){
+				error_log('Deprecated call in Shopify API call: ' . $this->last_response_headers['X-Shopify-Api-Deprecated-Reason'] );
+			}
 
 			if( $this->fourTwentyNines > 0 )
 				$this->fourTwentyNines = $this->fourTwentyNines - 1;
@@ -86,13 +90,13 @@ class ShopifyClientWrapper extends ShopifyClient {
 	}
 
 	function getLocations(){
-		$locs = $this->call("GET",'admin/locations.json');
+		$locs = $this->call("GET","admin/api/{$this->apiVersion}/locations.json");
 		return $locs;
 	}
 
 	function getProductCount() {
 		try {
-			$resp = $this->call('GET','admin/products/count.json');
+			$resp = $this->call('GET',"admin/api/{$this->apiVersion}/products/count.json");
 		} catch (ShopifyApiException $e) {
 			die("Error: " . $e->getMessage() );
 		}
@@ -101,8 +105,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 	}
 
 	function getProducts($fields=array()){
-		$products = $this->call('GET','admin/products.json',$fields);
-		// $products = json_decode($products);
+		$products = $this->call('GET',"admin/api/{$this->apiVersion}/products.json",$fields);
 		return $products;
 	}
 
@@ -127,7 +130,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 	}
 
 	function getProduct($id,$fields=array()){
-		$result = $this->call('GET',"admin/products/{$id}.json",$fields);
+		$result = $this->call('GET',"admin/api/{$this->apiVersion}/products/{$id}.json",$fields);
 		return $result;
 		// return json_decode($result);
 	}
@@ -145,7 +148,8 @@ class ShopifyClientWrapper extends ShopifyClient {
 		$chunkedIds = array_slice($inventory_item_ids, $i, $at_a_time);
 		while ( count($chunkedIds) ) {
 			$inventoryIdsString = implode(',',$chunkedIds);
-			$res = $this->call("GET","admin/inventory_levels.json?inventory_item_ids={$inventoryIdsString}&location_ids={$location_id}&limit=250");
+			// @FIXME check this out and see if we need to use cursors?
+			$res = $this->call("GET","admin/api/{$this->apiVersion}/inventory_levels.json?inventory_item_ids={$inventoryIdsString}&location_ids={$location_id}&limit=250");
 			if( is_array($res) )
 				$out = array_merge($out,$res);
 			$i = $i + $at_a_time;
@@ -159,7 +163,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 		$data[$type] = array_merge(array(
 			'id' => $id,
 			),$updatefields);
-		$result = $this->call('PUT',"admin/{$type}s/{$id}.json",$data);
+		$result = $this->call('PUT',"admin/api/{$this->apiVersion}/{$type}s/{$id}.json",$data);
 		// $result = json_decode($result);
 		return $result;
 	}
@@ -182,7 +186,7 @@ class ShopifyClientWrapper extends ShopifyClient {
 			"location_id" => $location_id, 
 			"available" => $newQuantity
 		);
-		$result = $this->call('POST',"admin/inventory_levels/set.json",$data);
+		$result = $this->call('POST',"admin/api/{$this->apiVersion}/inventory_levels/set.json",$data);
 		return $result;
 	}
 

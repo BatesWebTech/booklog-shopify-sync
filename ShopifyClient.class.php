@@ -8,7 +8,7 @@ class ShopifyClient {
 	private $token;
 	private $api_key;
 	private $secret;
-	private $last_response_headers = null;
+	protected $last_response_headers = null;
 
 	public function __construct($shop_domain, $token, $api_key, $secret) {
 		$this->name = "ShopifyClient";
